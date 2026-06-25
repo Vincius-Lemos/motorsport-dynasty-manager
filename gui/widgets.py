@@ -107,6 +107,118 @@ def draw_icon(surf, name, cx, cy, size, color):
             pygame.draw.rect(surf, color, (bx, cy + s*0.5 - s*hh, s*0.2, s*hh))
 
 
+def draw_flag(surf, x, y, cell=7, cols=4, rows=3, color=(235, 235, 240), pole=True):
+    """Bandeira quadriculada (xadrez) com mastro. (x, y) é o topo-esquerda do pano."""
+    if pole:
+        pygame.draw.line(surf, T.TEXT_DIM, (x, y - 2), (x, y + rows * cell + 4), 2)
+        x += 3
+    for r in range(rows):
+        for c in range(cols):
+            if (r + c) % 2 == 0:
+                pygame.draw.rect(surf, color,
+                                 (x + c * cell, y + r * cell, cell, cell))
+    pygame.draw.rect(surf, T.LINE, (x, y, cols * cell, rows * cell), width=1)
+    return cols * cell
+
+
+# ── Bandeiras nacionais simplificadas ─────────────────────────────────────────
+_FC = {
+    "white": (245, 245, 245), "red": (206, 17, 38), "blue": (0, 45, 116),
+    "green": (0, 120, 60), "yellow": (255, 205, 0), "black": (24, 24, 28),
+    "maroon": (122, 0, 25), "ltblue": (0, 102, 178), "darkgreen": (0, 100, 70),
+}
+
+
+def _bands(surf, x, y, w, h, colors, vertical, weights=None):
+    n = len(colors)
+    weights = weights or [1] * n
+    tot = sum(weights)
+    off = 0
+    for col, wt in zip(colors, weights):
+        seg = (w if vertical else h) * wt / tot
+        if vertical:
+            pygame.draw.rect(surf, _FC[col], (x + off, y, seg + 1, h))
+        else:
+            pygame.draw.rect(surf, _FC[col], (x, y + off, w, seg + 1))
+        off += seg
+
+
+# spec: ("v"/"h", [cores], [pesos opcionais])  ou  nome especial
+_FLAGS = {
+    "France": ("v", ["blue", "white", "red"]),
+    "Italy": ("v", ["green", "white", "red"]),
+    "Belgium": ("v", ["black", "yellow", "red"]),
+    "Mexico": ("v", ["green", "white", "red"]),
+    "Germany": ("h", ["black", "red", "yellow"]),
+    "Netherlands": ("h", ["red", "white", "blue"]),
+    "Hungary": ("h", ["red", "white", "green"]),
+    "Austria": ("h", ["red", "white", "red"]),
+    "Spain": ("h", ["red", "yellow", "red"], [1, 2, 1]),
+    "Azerbaijan": ("h", ["ltblue", "red", "green"]),
+    "Monaco": ("h", ["red", "white"]),
+    "Bahrain": ("v", ["white", "maroon"], [1, 3]),
+    "Qatar": ("v", ["white", "maroon"], [1, 4]),
+}
+
+
+def draw_country_flag(surf, x, y, country, w=34, h=22):
+    """Desenha uma bandeira nacional simplificada. (x, y) = topo-esquerda."""
+    spec = _FLAGS.get(country)
+    if spec:
+        orient = spec[0]
+        _bands(surf, x, y, w, h, spec[1], orient == "v",
+               spec[2] if len(spec) > 2 else None)
+    elif country == "Japan":
+        pygame.draw.rect(surf, _FC["white"], (x, y, w, h))
+        pygame.draw.circle(surf, _FC["red"], (int(x + w / 2), int(y + h / 2)), int(h * 0.32))
+    elif country == "China":
+        pygame.draw.rect(surf, _FC["red"], (x, y, w, h))
+        pygame.draw.circle(surf, _FC["yellow"], (int(x + w * 0.22), int(y + h * 0.32)), 3)
+        for dx, dy in [(0.40, 0.18), (0.46, 0.34), (0.46, 0.55), (0.40, 0.70)]:
+            pygame.draw.circle(surf, _FC["yellow"], (int(x + w * dx), int(y + h * dy)), 1)
+    elif country == "Brazil":
+        pygame.draw.rect(surf, _FC["green"], (x, y, w, h))
+        cx, cy = x + w / 2, y + h / 2
+        pygame.draw.polygon(surf, _FC["yellow"],
+                            [(cx, y + 2), (x + w - 3, cy), (cx, y + h - 2), (x + 3, cy)])
+        pygame.draw.circle(surf, _FC["blue"], (int(cx), int(cy)), int(h * 0.20))
+    elif country == "Canada":
+        pygame.draw.rect(surf, _FC["white"], (x, y, w, h))
+        pygame.draw.rect(surf, _FC["red"], (x, y, w * 0.25, h))
+        pygame.draw.rect(surf, _FC["red"], (x + w * 0.75, y, w * 0.25, h))
+        pygame.draw.rect(surf, _FC["red"], (int(x + w * 0.45), int(y + h * 0.35), int(w * 0.1), int(h * 0.3)))
+    elif country == "USA":
+        for i in range(7):
+            col = "red" if i % 2 == 0 else "white"
+            pygame.draw.rect(surf, _FC[col], (x, y + i * h / 7, w, h / 7 + 1))
+        pygame.draw.rect(surf, _FC["blue"], (x, y, w * 0.42, h * 0.55))
+    elif country in ("UK", "Australia", "Singapore"):
+        # base azul com cruz branca/vermelha (aproximação do Union/azul)
+        pygame.draw.rect(surf, _FC["blue"], (x, y, w, h))
+        pygame.draw.line(surf, _FC["white"], (x, y + h / 2), (x + w, y + h / 2), 4)
+        pygame.draw.line(surf, _FC["white"], (x + w / 2, y), (x + w / 2, y + h), 4)
+        pygame.draw.line(surf, _FC["red"], (x, y + h / 2), (x + w, y + h / 2), 2)
+        pygame.draw.line(surf, _FC["red"], (x + w / 2, y), (x + w / 2, y + h), 2)
+        if country == "Singapore":
+            pygame.draw.rect(surf, _FC["red"], (x, y, w, h / 2))
+            pygame.draw.rect(surf, _FC["white"], (x, y + h / 2, w, h / 2))
+            pygame.draw.circle(surf, _FC["white"], (int(x + w * 0.25), int(y + h * 0.25)), 4)
+    elif country == "Saudi Arabia":
+        pygame.draw.rect(surf, _FC["darkgreen"], (x, y, w, h))
+        pygame.draw.line(surf, _FC["white"], (x + 4, y + h - 5), (x + w - 4, y + h - 5), 2)
+    elif country == "UAE":
+        pygame.draw.rect(surf, _FC["red"], (x, y, w * 0.28, h))
+        _bands(surf, x + w * 0.28, y, w * 0.72, h, ["green", "white", "black"], False)
+    elif country == "Qatar":
+        _bands(surf, x, y, w, h, ["white", "maroon"], True, [1, 4])
+    else:
+        # genérica: bandeira quadriculada
+        draw_flag(surf, x, y, cell=max(4, h // 3), cols=3, rows=3, pole=False)
+        return w
+    pygame.draw.rect(surf, (60, 62, 80), (x, y, w, h), width=1)
+    return w
+
+
 ICON_NAMES = {"play","save","menu","dev","transfer","team","star","cap","door","helmet","chart"}
 
 

@@ -12,7 +12,8 @@ import pygame
 from . import theme as T
 from .app import Scene
 from .widgets import (draw_text, panel, accent_strip, stat_bar, chip,
-                      Button, TextInput, SelectList, draw_icon)
+                      Button, TextInput, SelectList, draw_icon, draw_flag,
+                      draw_country_flag)
 
 from game.player_profile import (PlayerProfile, MANAGER_ENTRY_COST,
                                  DRIVER_AGE_GATE)
@@ -496,7 +497,9 @@ class CareerScene(Scene):
         panel(surf, (x, y, T.WIDTH - x - 28, 150), T.BG_PANEL)
         if rnd:
             draw_text(surf, "PRÓXIMA CORRIDA", f.tiny, T.ACCENT, (x + 20, y + 16))
-            draw_text(surf, rnd.track_name, f.h1, T.TEXT, (x + 20, y + 36))
+            name_rect = draw_text(surf, rnd.track_name, f.h1, T.TEXT, (x + 20, y + 36))
+            # bandeira do país ao lado do nome da pista
+            draw_country_flag(surf, name_rect.right + 18, name_rect.centery - 11, rnd.country)
             draw_text(surf, f"{rnd.country}  ·  {rnd.laps} voltas  ·  {rnd.track_type}",
                       f.small, T.TEXT_DIM, (x + 20, y + 84))
         else:
