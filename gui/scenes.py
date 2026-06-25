@@ -297,12 +297,14 @@ class CareerScene(Scene):
         self.nav = []
         x = 28
         if self.mode == "driver":
-            items = [("Classificação", "chart", lambda: self.app.push(StandingsScene(self.app))),
+            items = [("Perfil",        "helmet", lambda: self.app.push(PerfilScene(self.app))),
+                     ("Classificação", "chart", lambda: self.app.push(StandingsScene(self.app))),
                      ("Super Licença", "star",  lambda: self.app.push(SuperLicenceScene(self.app))),
                      ("Academia",      "cap",   lambda: self.app.push(AcademyScene(self.app))),
                      ("Aposentar",     "door",  lambda: self.app.push(RetireScene(self.app)))]
         else:
-            items = [("Desenvolvimento", "dev",      lambda: self.app.push(DevelopmentScene(self.app))),
+            items = [("Perfil",          "helmet",   lambda: self.app.push(PerfilScene(self.app))),
+                     ("Desenvolvimento", "dev",      lambda: self.app.push(DevelopmentScene(self.app))),
                      ("Transferências",  "transfer", lambda: self.app.push(TransferScene(self.app))),
                      ("Equipe",          "team",     lambda: self.app.push(TeamInfoScene(self.app))),
                      ("Classificação",   "chart",    lambda: self.app.push(StandingsScene(self.app))),
@@ -1598,6 +1600,113 @@ class TransferScene(SubScene):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# PERFIL DO JOGADOR
+# ══════════════════════════════════════════════════════════════════════════════
+class PerfilScene(SubScene):
+    title = "Perfil"
+    ROW = 32
+
+    def setup(self):
+        self.scroll = 0
+        self.visible = (470 - 40) // self.ROW
+
+    def body_handle(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button in (4, 5):
+            n = len(self.app.profile.history)
+            d = -1 if event.button == 4 else 1
+            self.scroll = max(0, min(max(0, n - self.visible), self.scroll + d))
+
+    def body(self, surf):
+        f = self.app.fonts
+        car = self.app.career
+        p = self.app.profile
+        is_driver = p.mode != "manager"
+
+        # ── Painel esquerdo: identidade + habilidades ────────────────────────
+        panel(surf, (40, 110, 560, 540), T.BG_PANEL)
+        x = 64
+        draw_text(surf, p.name, f.h1, T.TEXT, (x, 126))
+        mode_lbl = {"driver": "Piloto", "manager": "Chefe de Equipe",
+                    "manager_turned_driver": "Piloto (ex-gerente)"}.get(p.mode, p.mode)
+        draw_text(surf, f"{p.age} anos · {p.nationality} · {mode_lbl}",
+                  f.small, T.TEXT_DIM, (x, 168))
+        # reputação + dinheiro
+        draw_text(surf, "REPUTAÇÃO", f.tiny, T.TEXT_DIM, (x, 200))
+        draw_text(surf, f"{p.reputation}/100", f.h2, T.ACCENT_2, (x, 218))
+        draw_text(surf, "DINHEIRO PESSOAL", f.tiny, T.TEXT_DIM, (x + 220, 200))
+        draw_text(surf, f"€ {p.personal_money:,}".replace(",", "."), f.h2, T.GOLD, (x + 220, 218))
+
+        y = 262
+        if is_driver and car.player_driver:
+            d = car.player_driver
+            draw_text(surf, "HABILIDADES", f.tiny, T.ACCENT, (x, y)); y += 24
+            w = 500
+            for label, val in [("Velocidade", d.speed), ("Consistência", d.consistency),
+                               ("Ultrapassagem", d.overtaking), ("Pneus", d.tyre_mgmt),
+                               ("Defesa", d.defence), ("Chuva", d.rain), ("Feedback", d.feedback)]:
+                y = stat_bar(surf, x, y, w, label, val, color=T.ACCENT, fonts=f) + 10
+            y += 6
+            # totais de carreira
+            tot = [("Vitórias", d.total_wins), ("Pódios", d.total_podiums),
+                   ("Corridas", d.races_completed), ("SL", f"{d.super_licence_points}/40")]
+            tx = x
+            for lab, v in tot:
+                box = pygame.Rect(tx, y, 116, 54)
+                pygame.draw.rect(surf, T.BG_PANEL_2, box, border_radius=6)
+                draw_text(surf, str(v), f.h2, T.TEXT, (box.centerx, box.y + 8), center=True)
+                draw_text(surf, lab, f.tiny, T.TEXT_DIM, (box.centerx, box.y + 36), center=True)
+                tx += 124
+        else:
+            draw_text(surf, "RESUMO", f.tiny, T.ACCENT, (x, y)); y += 28
+            draw_text(surf, f"Temporadas geridas: {len(p.history)}", f.body, T.TEXT, (x, y)); y += 32
+            if car.player_team:
+                draw_text(surf, f"Equipe atual: {car.player_team.name}", f.body, T.TEXT, (x, y))
+
+        # ── Painel direito: histórico + equipes/categorias ───────────────────
+        rx = 620
+        rw = T.WIDTH - rx - 40
+        # equipes e categorias passadas
+        teams = list(dict.fromkeys(h.team for h in p.history))
+        cats = list(dict.fromkeys(h.series for h in p.history))
+        panel(surf, (rx, 110, rw, 110), T.BG_PANEL)
+        draw_text(surf, "CATEGORIAS", f.tiny, T.ACCENT, (rx + 18, 122))
+        cxp = rx + 18
+        for c in cats[:6]:
+            r = chip(surf, c, (cxp, 144), f.tiny, T.BG, T.ACCENT_2)
+            cxp += r.width + 8
+        draw_text(surf, "EQUIPES", f.tiny, T.ACCENT, (rx + 18, 176))
+        txp = rx + 18
+        for tname in teams[:5]:
+            r = chip(surf, tname, (txp, 196), f.tiny, T.TEXT, T.BG_PANEL_2)
+            txp += r.width + 8
+            if txp > rx + rw - 120:
+                break
+
+        # histórico (rolável)
+        panel(surf, (rx, 230, rw, 420), T.BG_PANEL)
+        draw_text(surf, "HISTÓRICO DE CARREIRA", f.tiny, T.ACCENT, (rx + 18, 242))
+        draw_text(surf, "ANO", f.tiny, T.TEXT_DIM, (rx + 18, 268))
+        draw_text(surf, "CATEGORIA", f.tiny, T.TEXT_DIM, (rx + 80, 268))
+        draw_text(surf, "EQUIPE", f.tiny, T.TEXT_DIM, (rx + 300, 268))
+        draw_text(surf, "POS", f.tiny, T.TEXT_DIM, (rx + rw - 24, 268), right=True)
+        prev = surf.get_clip()
+        surf.set_clip(pygame.Rect(rx, 290, rw, 350))
+        ry = 296
+        hist = list(reversed(self.app.profile.history))
+        for h in hist[self.scroll:self.scroll + self.visible + 1]:
+            pcol = T.GOLD if h.position == 1 else T.TEXT
+            draw_text(surf, str(h.year), f.small, T.TEXT_DIM, (rx + 18, ry))
+            draw_text(surf, h.series, f.small, T.TEXT, (rx + 80, ry))
+            draw_text(surf, h.team, f.small, T.TEXT_DIM, (rx + 300, ry))
+            tag = f"P{h.position}" + ("  ↑" if h.promoted else "")
+            draw_text(surf, tag, f.small, pcol, (rx + rw - 24, ry), right=True)
+            ry += self.ROW
+        if not hist:
+            draw_text(surf, "Ainda sem temporadas concluídas.", f.small, T.TEXT_DIM, (rx + 18, ry))
+        surf.set_clip(prev)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # EQUIPE E PILOTOS (info)
 # ══════════════════════════════════════════════════════════════════════════════
 class TeamInfoScene(SubScene):
@@ -1785,12 +1894,44 @@ class OfferScene(Scene):
 
     def on_enter(self):
         f = self.app.fonts
-        self.yes = Button((T.WIDTH // 2 - 230, 520, 200, 54), "ACEITAR", self._accept, f.h2,
+        car = self.app.career
+        p = self.app.profile
+        self.is_driver = p.mode != "manager"
+        self.forced = self.offer.get("forced", False)
+        # situação atual
+        if self.is_driver and car.player_driver:
+            d = car.player_driver
+            self.cur_team = car.current_team.name if car.current_team else "—"
+            self.cur_series = SERIES_LABEL.get(car.current_series_id, "")
+            self.cur_salary = d.salary
+            self.cur_years = d.contract_years
+        else:
+            self.cur_team = car.player_team.name if getattr(car, "player_team", None) else "—"
+            self.cur_series = SERIES_LABEL.get(car.current_series_id, "")
+            self.cur_salary = 0
+            self.cur_years = 1
+        # multa: se for demissão, a equipe paga você; se você rescinde sob contrato, você paga
+        base_pen = (self.cur_salary * max(1, self.cur_years)) // 2
+        self.penalty = base_pen if self.is_driver else 0
+        # você paga multa se romper contrato voluntariamente (ou quebrar pré-contrato já assinado)
+        self.player_pays = (self.is_driver and not self.forced and
+                            (self.cur_years > 0 or self.offer.get("has_pending")))
+        self.team_pays = self.is_driver and self.forced
+
+        self.yes = Button((T.WIDTH // 2 - 230, 600, 200, 54), "ACEITAR", self._accept, f.h2,
                           color=T.GREEN, text_color=T.BG)
-        self.no = Button((T.WIDTH // 2 + 30, 520, 200, 54), "RECUSAR", self._reject, f.h2,
+        self.no = Button((T.WIDTH // 2 + 30, 600, 200, 54), "RECUSAR", self._reject, f.h2,
                          kind="ghost")
 
     def _accept(self):
+        p = self.app.profile
+        if self.player_pays and self.penalty > 0:
+            if p.personal_money < self.penalty:
+                self.app.notify(f"Sem dinheiro para a multa de € {self.penalty:,}".replace(",", "."))
+                return
+            p.personal_money -= self.penalty
+        elif self.team_pays and self.penalty > 0:
+            p.receive_salary(self.penalty)
         self.app.career._pending_offer = self.offer
         self.app.notify(f"Proposta aceita: {self.offer['from_team']}")
         self.app.pop()
@@ -1804,29 +1945,57 @@ class OfferScene(Scene):
 
     def update(self, dt): ...
 
+    def _column(self, surf, f, x, w, title, tcol, rows):
+        panel(surf, (x, 250, w, 300), T.BG_PANEL_2)
+        draw_text(surf, title, f.small, tcol, (x + 20, 264))
+        pygame.draw.line(surf, T.LINE, (x + 16, 296), (x + w - 16, 296), 1)
+        y = 312
+        for lab, val, vcol in rows:
+            draw_text(surf, lab, f.small, T.TEXT_DIM, (x + 20, y))
+            draw_text(surf, val, f.body, vcol, (x + w - 20, y), right=True)
+            y += 40
+
     def draw(self, surf):
         gradient_bg(surf)
         f = self.app.fonts
         o = self.offer
-        label = OFFER_TYPE_LABEL.get(o["type"], "PROPOSTA")
         cx = T.WIDTH // 2
-        panel(surf, (cx - 360, 130, 720, 360), T.BG_PANEL, border=T.ACCENT, border_w=2)
-        draw_text(surf, label, f.h1, T.ACCENT, (cx, 160), center=True)
-        draw_text(surf, o["description"], f.body, T.TEXT, (cx, 215), center=True)
-        x = cx - 300
-        rows = [("Equipe", o["from_team"]),
-                ("Categoria", o["from_series_label"]),
-                ("Chassi", f"{o.get('team_chassis','?')}/100"),
-                ("Salário", f"€ {o['salary']:,}".replace(",", ".") + "/ano"),
-                ("Contrato", f"{o['years']} ano(s)")]
-        y = 265
-        for lab, val in rows:
-            draw_text(surf, lab, f.body, T.TEXT_DIM, (x, y))
-            draw_text(surf, val, f.body, T.TEXT, (x + 600, y), right=True)
-            y += 36
-        if o.get("forced"):
-            draw_text(surf, "ATENÇÃO: sua equipe está te dispensando.",
-                      f.small, T.RED, (cx, 460), center=True)
+        label = OFFER_TYPE_LABEL.get(o["type"], "PROPOSTA")
+        draw_text(surf, label, f.h1, T.ACCENT, (cx, 110), center=True)
+        draw_text(surf, o["description"], f.body, T.TEXT, (cx, 165), center=True)
+
+        col_w = 440
+        # Coluna A — situação atual
+        self._column(surf, f, cx - col_w - 20, col_w, "A · SITUAÇÃO ATUAL", T.TEXT_DIM, [
+            ("Equipe", self.cur_team, T.TEXT),
+            ("Categoria", self.cur_series, T.TEXT),
+            ("Salário", f"€ {self.cur_salary:,}".replace(",", ".") if self.cur_salary else "—", T.TEXT),
+            ("Contrato", f"{self.cur_years} ano(s)", T.TEXT),
+            ("Multa de saída", f"€ {self.penalty:,}".replace(",", ".") if self.penalty else "—",
+             T.RED if self.player_pays else T.TEXT_DIM),
+        ])
+        # Coluna B — nova proposta
+        risco = "Demissão imediata" if self.forced else "Troca de equipe"
+        self._column(surf, f, cx + 20, col_w, "B · NOVA PROPOSTA", T.GREEN, [
+            ("Equipe", o["from_team"], T.TEXT),
+            ("Categoria", o["from_series_label"], T.ACCENT_2),
+            ("Salário", f"€ {o['salary']:,}".replace(",", ".") + "/ano", T.GOLD),
+            ("Duração", f"{o['years']} ano(s)", T.TEXT),
+            ("Função", "Titular", T.TEXT),
+        ])
+
+        # faixa da multa
+        if self.team_pays and self.penalty:
+            msg = f"A equipe te DISPENSA e paga a multa: + € {self.penalty:,}".replace(",", ".")
+            mcol = T.GREEN
+        elif self.player_pays and self.penalty:
+            msg = f"Você rescinde o contrato e paga a multa: − € {self.penalty:,}".replace(",", ".")
+            mcol = T.RED
+        else:
+            msg = "Sem multa (fim de contrato)."
+            mcol = T.TEXT_DIM
+        draw_text(surf, msg, f.body, mcol, (cx, 566), center=True)
+
         self.yes.draw(surf)
         self.no.draw(surf)
 
