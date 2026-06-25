@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Saves do jogo
+saves/
+
+# Build / dist
+dist/
+build/
+
+# Teste temporário
+_smoke*.py
+_test*.py

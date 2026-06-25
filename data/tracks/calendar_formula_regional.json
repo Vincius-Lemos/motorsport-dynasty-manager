@@ -1,0 +1,17 @@
+{
+  "series": "formula_regional",
+  "rounds": [
+    {"round": 1,  "name": "Monza",           "country": "Italy",       "laps": 45, "length_km": 5.793, "type": "fast",      "overtaking": 9, "tyre_wear": 4},
+    {"round": 2,  "name": "Spa-Francorchamps","country": "Belgium",    "laps": 30, "length_km": 7.004, "type": "mixed",     "overtaking": 7, "tyre_wear": 6},
+    {"round": 3,  "name": "Barcelona",        "country": "Spain",       "laps": 50, "length_km": 4.655, "type": "technical", "overtaking": 4, "tyre_wear": 7},
+    {"round": 4,  "name": "Zandvoort",        "country": "Netherlands", "laps": 52, "length_km": 4.259, "type": "technical", "overtaking": 3, "tyre_wear": 8},
+    {"round": 5,  "name": "Silverstone",      "country": "UK",          "laps": 42, "length_km": 5.891, "type": "fast",      "overtaking": 6, "tyre_wear": 5},
+    {"round": 6,  "name": "Red Bull Ring",    "country": "Austria",     "laps": 60, "length_km": 4.318, "type": "fast",      "overtaking": 8, "tyre_wear": 5},
+    {"round": 7,  "name": "Hungaroring",      "country": "Hungary",     "laps": 55, "length_km": 4.381, "type": "technical", "overtaking": 3, "tyre_wear": 6},
+    {"round": 8,  "name": "Imola",            "country": "Italy",       "laps": 48, "length_km": 4.909, "type": "mixed",     "overtaking": 4, "tyre_wear": 7},
+    {"round": 9,  "name": "Mugello",          "country": "Italy",       "laps": 50, "length_km": 5.245, "type": "fast",      "overtaking": 5, "tyre_wear": 6},
+    {"round": 10, "name": "Pau",              "country": "France",      "laps": 65, "length_km": 2.760, "type": "street",    "overtaking": 2, "tyre_wear": 5},
+    {"round": 11, "name": "Hockenheim",       "country": "Germany",     "laps": 48, "length_km": 4.574, "type": "mixed",     "overtaking": 7, "tyre_wear": 5},
+    {"round": 12, "name": "Valencia",         "country": "Spain",       "laps": 50, "length_km": 5.419, "type": "street",    "overtaking": 3, "tyre_wear": 6}
+  ]
+}

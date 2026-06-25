@@ -1,0 +1,28 @@
+{
+  "id": "formula_3",
+  "name": "FIA Formula 3 Championship",
+  "short_name": "F3",
+  "category_level": 2,
+  "cars_per_team": 2,
+  "max_teams": 10,
+  "budget_level": "medium",
+  "promotion_spots": 3,
+  "relegation_spots": 0,
+  "promotes_to": "formula_2",
+  "rules": {
+    "pitstops_required": true,
+    "refueling": false,
+    "tyre_compounds": ["soft", "medium", "hard"],
+    "drs": true,
+    "ers": false,
+    "safety_car": true
+  },
+  "scoring": [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+  "base_lap_time_seconds": 88.0,
+  "pit_stop_time_seconds": 24.0,
+  "min_budget_to_enter": 1500000,
+  "super_licence_points": {
+    "1": 30, "2": 25, "3": 20, "4": 15, "5": 10,
+    "6": 8, "7": 8, "8": 5, "9": 5, "10": 3
+  }
+}

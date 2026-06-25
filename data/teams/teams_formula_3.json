@@ -1,0 +1,74 @@
+{
+  "teams": [
+    {
+      "id": "f3_prema",   "name": "Prema Racing",           "short": "PRM", "color": "#CC0000",
+      "chassis": 88, "aerodynamics": 86, "reliability": 86, "pit_crew": 85, "engineers": 84, "factory": 82, "reputation": 90,
+      "budget": 3500000, "base_cost_per_race": 105000,
+      "sponsors": [{"name": "Ferrari Driver Academy", "value": 1000000, "requirement": "top2_champion"}, {"name": "Sabelt", "value": 280000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_art",     "name": "ART Grand Prix",         "short": "ART", "color": "#0055AA",
+      "chassis": 86, "aerodynamics": 84, "reliability": 84, "pit_crew": 83, "engineers": 82, "factory": 80, "reputation": 86,
+      "budget": 3100000, "base_cost_per_race": 98000,
+      "sponsors": [{"name": "Alpine Academy", "value": 850000, "requirement": "top3_champion"}, {"name": "Total Energies", "value": 240000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_hitech",  "name": "Hitech Grand Prix",      "short": "HIT", "color": "#FF6600",
+      "chassis": 84, "aerodynamics": 82, "reliability": 82, "pit_crew": 81, "engineers": 80, "factory": 78, "reputation": 80,
+      "budget": 2800000, "base_cost_per_race": 92000,
+      "sponsors": [{"name": "Red Bull Junior", "value": 750000, "requirement": "top3_champion"}, {"name": "Hitech Corp", "value": 210000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_mp",      "name": "MP Motorsport",          "short": "MPM", "color": "#FF0066",
+      "chassis": 82, "aerodynamics": 80, "reliability": 80, "pit_crew": 79, "engineers": 78, "factory": 76, "reputation": 76,
+      "budget": 2500000, "base_cost_per_race": 86000,
+      "sponsors": [{"name": "MP Group", "value": 640000, "requirement": "top4_champion"}, {"name": "NL Racing", "value": 190000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_trident", "name": "Trident Motorsport",     "short": "TRI", "color": "#006666",
+      "chassis": 80, "aerodynamics": 78, "reliability": 78, "pit_crew": 77, "engineers": 76, "factory": 74, "reputation": 72,
+      "budget": 2200000, "base_cost_per_race": 80000,
+      "sponsors": [{"name": "Trident Group", "value": 560000, "requirement": "top5_champion"}, {"name": "ItalFinance", "value": 170000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_campos",  "name": "Campos Racing",          "short": "CAM", "color": "#008800",
+      "chassis": 78, "aerodynamics": 76, "reliability": 76, "pit_crew": 75, "engineers": 74, "factory": 72, "reputation": 68,
+      "budget": 2000000, "base_cost_per_race": 75000,
+      "sponsors": [{"name": "Iberdrola", "value": 500000, "requirement": "top6_champion"}, {"name": "Cepsa", "value": 150000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_carlin",  "name": "Carlin Motorsport",      "short": "CAR", "color": "#660099",
+      "chassis": 83, "aerodynamics": 81, "reliability": 81, "pit_crew": 80, "engineers": 79, "factory": 77, "reputation": 77,
+      "budget": 2600000, "base_cost_per_race": 88000,
+      "sponsors": [{"name": "Carlin Family", "value": 660000, "requirement": "top3_champion"}, {"name": "UK Motorsport", "value": 200000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_charouz", "name": "Charouz Racing System",  "short": "CHR", "color": "#CC6600",
+      "chassis": 76, "aerodynamics": 74, "reliability": 74, "pit_crew": 73, "engineers": 72, "factory": 70, "reputation": 64,
+      "budget": 1900000, "base_cost_per_race": 72000,
+      "sponsors": [{"name": "Czech Invest", "value": 440000, "requirement": "top7_champion"}, {"name": "Charouz Corp", "value": 135000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_phm",     "name": "PHM Racing",             "short": "PHM", "color": "#003366",
+      "chassis": 74, "aerodynamics": 72, "reliability": 72, "pit_crew": 71, "engineers": 70, "factory": 68, "reputation": 58,
+      "budget": 1700000, "base_cost_per_race": 68000,
+      "sponsors": [{"name": "PHM Invest", "value": 380000, "requirement": "top8_champion"}, {"name": "EuroSpeed", "value": 120000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f3_jenzer",  "name": "Jenzer Motorsport",      "short": "JEN", "color": "#336600",
+      "chassis": 72, "aerodynamics": 70, "reliability": 70, "pit_crew": 69, "engineers": 68, "factory": 66, "reputation": 54,
+      "budget": 1600000, "base_cost_per_race": 65000,
+      "sponsors": [{"name": "Swiss Finance", "value": 330000, "requirement": "top9_champion"}, {"name": "Jenzer Corp", "value": 105000, "requirement": "none"}],
+      "is_player_team": false
+    }
+  ]
+}

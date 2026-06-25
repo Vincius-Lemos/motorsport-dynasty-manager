@@ -1,0 +1,19 @@
+{
+  "series": "formula_3",
+  "rounds": [
+    {"round": 1,  "name": "Bahrain",          "country": "Bahrain",     "laps": 32, "length_km": 5.412, "type": "mixed",     "overtaking": 7, "tyre_wear": 8},
+    {"round": 2,  "name": "Jeddah",           "country": "Saudi Arabia","laps": 27, "length_km": 6.174, "type": "street",    "overtaking": 5, "tyre_wear": 5},
+    {"round": 3,  "name": "Melbourne",        "country": "Australia",   "laps": 35, "length_km": 5.278, "type": "street",    "overtaking": 4, "tyre_wear": 6},
+    {"round": 4,  "name": "Imola",            "country": "Italy",       "laps": 32, "length_km": 4.909, "type": "mixed",     "overtaking": 4, "tyre_wear": 7},
+    {"round": 5,  "name": "Monaco",           "country": "Monaco",      "laps": 42, "length_km": 3.337, "type": "street",    "overtaking": 1, "tyre_wear": 4},
+    {"round": 6,  "name": "Barcelona",        "country": "Spain",       "laps": 38, "length_km": 4.655, "type": "technical", "overtaking": 4, "tyre_wear": 7},
+    {"round": 7,  "name": "Silverstone",      "country": "UK",          "laps": 30, "length_km": 5.891, "type": "fast",      "overtaking": 6, "tyre_wear": 5},
+    {"round": 8,  "name": "Hungaroring",      "country": "Hungary",     "laps": 40, "length_km": 4.381, "type": "technical", "overtaking": 3, "tyre_wear": 6},
+    {"round": 9,  "name": "Spa-Francorchamps","country": "Belgium",     "laps": 22, "length_km": 7.004, "type": "mixed",     "overtaking": 7, "tyre_wear": 6},
+    {"round": 10, "name": "Zandvoort",        "country": "Netherlands", "laps": 40, "length_km": 4.259, "type": "technical", "overtaking": 3, "tyre_wear": 8},
+    {"round": 11, "name": "Monza",            "country": "Italy",       "laps": 35, "length_km": 5.793, "type": "fast",      "overtaking": 9, "tyre_wear": 4},
+    {"round": 12, "name": "Singapore",        "country": "Singapore",   "laps": 30, "length_km": 5.063, "type": "street",    "overtaking": 2, "tyre_wear": 5},
+    {"round": 13, "name": "Suzuka",           "country": "Japan",       "laps": 32, "length_km": 5.807, "type": "fast",      "overtaking": 5, "tyre_wear": 7},
+    {"round": 14, "name": "Abu Dhabi",        "country": "UAE",         "laps": 33, "length_km": 5.281, "type": "mixed",     "overtaking": 6, "tyre_wear": 5}
+  ]
+}

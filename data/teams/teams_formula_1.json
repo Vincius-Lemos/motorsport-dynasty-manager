@@ -1,0 +1,84 @@
+{
+  "teams": [
+    {
+      "id": "f1_redbull",  "name": "Oracle Red Bull Racing",  "short": "RBR", "color": "#1E41FF",
+      "chassis": 97, "aerodynamics": 96, "reliability": 94, "pit_crew": 97, "engineers": 96, "factory": 98, "reputation": 100,
+      "budget": 55000000, "base_cost_per_race": 1800000,
+      "sponsors": [{"name": "Oracle", "value": 12000000, "requirement": "top1_champion"}, {"name": "Red Bull", "value": 5000000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "red_bull_junior"
+    },
+    {
+      "id": "f1_ferrari",  "name": "Scuderia Ferrari",        "short": "FER", "color": "#DC0000",
+      "chassis": 95, "aerodynamics": 94, "reliability": 92, "pit_crew": 95, "engineers": 95, "factory": 97, "reputation": 99,
+      "budget": 52000000, "base_cost_per_race": 1750000,
+      "sponsors": [{"name": "Shell", "value": 11000000, "requirement": "top2_champion"}, {"name": "Santander", "value": 4500000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "ferrari_driver_academy"
+    },
+    {
+      "id": "f1_mercedes","name": "Mercedes-AMG Petronas F1", "short": "MER", "color": "#00D2BE",
+      "chassis": 94, "aerodynamics": 93, "reliability": 93, "pit_crew": 96, "engineers": 97, "factory": 97, "reputation": 98,
+      "budget": 50000000, "base_cost_per_race": 1700000,
+      "sponsors": [{"name": "Petronas", "value": 10000000, "requirement": "top3_champion"}, {"name": "ING", "value": 4000000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "mercedes_junior"
+    },
+    {
+      "id": "f1_mclaren", "name": "McLaren F1 Team",          "short": "MCL", "color": "#FF8700",
+      "chassis": 93, "aerodynamics": 92, "reliability": 91, "pit_crew": 94, "engineers": 93, "factory": 95, "reputation": 95,
+      "budget": 45000000, "base_cost_per_race": 1550000,
+      "sponsors": [{"name": "Gulf", "value": 9000000, "requirement": "top3_champion"}, {"name": "OKX", "value": 3500000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": null
+    },
+    {
+      "id": "f1_aston",   "name": "Aston Martin Aramco F1",  "short": "AMR", "color": "#006F62",
+      "chassis": 90, "aerodynamics": 89, "reliability": 89, "pit_crew": 91, "engineers": 91, "factory": 92, "reputation": 90,
+      "budget": 38000000, "base_cost_per_race": 1350000,
+      "sponsors": [{"name": "Aramco", "value": 8000000, "requirement": "top4_champion"}, {"name": "Cognizant", "value": 3000000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "aston_martin_autosport"
+    },
+    {
+      "id": "f1_alpine",  "name": "BWT Alpine F1 Team",      "short": "ALP", "color": "#0090FF",
+      "chassis": 87, "aerodynamics": 86, "reliability": 86, "pit_crew": 88, "engineers": 88, "factory": 89, "reputation": 84,
+      "budget": 32000000, "base_cost_per_race": 1150000,
+      "sponsors": [{"name": "BWT", "value": 6500000, "requirement": "top5_champion"}, {"name": "Amazon", "value": 2500000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "alpine_academy"
+    },
+    {
+      "id": "f1_williams","name": "Williams Racing",          "short": "WIL", "color": "#005AFF",
+      "chassis": 84, "aerodynamics": 83, "reliability": 84, "pit_crew": 85, "engineers": 85, "factory": 86, "reputation": 80,
+      "budget": 28000000, "base_cost_per_race": 1000000,
+      "sponsors": [{"name": "Duracell", "value": 5500000, "requirement": "top6_champion"}, {"name": "Kraken", "value": 2000000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "williams_racing_academy"
+    },
+    {
+      "id": "f1_haas",    "name": "MoneyGram Haas F1 Team",  "short": "HAS", "color": "#B6BABD",
+      "chassis": 82, "aerodynamics": 81, "reliability": 82, "pit_crew": 83, "engineers": 83, "factory": 83, "reputation": 76,
+      "budget": 24000000, "base_cost_per_race": 880000,
+      "sponsors": [{"name": "MoneyGram", "value": 5000000, "requirement": "top7_champion"}, {"name": "Haas CNC", "value": 1800000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": null
+    },
+    {
+      "id": "f1_rb",      "name": "Visa Cash App RB F1",     "short": "VCR", "color": "#6692FF",
+      "chassis": 85, "aerodynamics": 84, "reliability": 84, "pit_crew": 86, "engineers": 86, "factory": 86, "reputation": 81,
+      "budget": 30000000, "base_cost_per_race": 1050000,
+      "sponsors": [{"name": "Visa", "value": 5800000, "requirement": "top5_champion"}, {"name": "Cash App", "value": 2200000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": "red_bull_junior"
+    },
+    {
+      "id": "f1_sauber",  "name": "Stake F1 Team Kick Sauber","short": "SAU", "color": "#52E252",
+      "chassis": 80, "aerodynamics": 79, "reliability": 80, "pit_crew": 81, "engineers": 81, "factory": 81, "reputation": 72,
+      "budget": 22000000, "base_cost_per_race": 820000,
+      "sponsors": [{"name": "Stake", "value": 4500000, "requirement": "top8_champion"}, {"name": "Kick", "value": 1600000, "requirement": "none"}],
+      "is_player_team": false,
+      "academy": null
+    }
+  ]
+}
