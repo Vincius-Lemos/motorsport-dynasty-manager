@@ -15,3 +15,6 @@ build/
 # Teste temporário
 _smoke*.py
 _test*.py
+
+# Config local do Claude Code
+.claude/
