@@ -151,6 +151,28 @@ class DriverCareer:
         cr = self.season.current_round
         return self.season.rounds[cr] if cr < len(self.season.rounds) else None
 
+    def run_qualifying(self, is_wet: bool = False) -> Optional[dict]:
+        """Roda a classificação e guarda o grid para a próxima corrida."""
+        from . import qualifying as q
+        track = self.current_round()
+        if not track:
+            return None
+        active = [d for d in self.all_drivers if not d.is_injured]
+        teams = {t.id: t for t in self.all_teams}
+        res = q.simulate_qualifying(active, teams, self.current_series_id, track,
+                                    self.series_rules["base_lap_time_seconds"], is_wet)
+        self._grid_order = res["order"]
+        # XP por classificar
+        for d in active:
+            d.gain_race_xp(3)
+        return res
+
+    def player_quali_position(self, quali: dict) -> int:
+        for r in quali["rows"]:
+            if r["driver_id"] == self.player_driver.id:
+                return r["pos"]
+        return len(quali["rows"])
+
     def simulate_next_race(self, player_strategy=None) -> Tuple[list, list]:
         track = self.current_round()
         if not track:
@@ -194,7 +216,9 @@ class DriverCareer:
             base_lap_time=self.series_rules["base_lap_time_seconds"],
             pit_stop_time=self.series_rules["pit_stop_time_seconds"],
             player_strategy=player_strategy,
+            grid_order=getattr(self, "_grid_order", None),
         )
+        self._grid_order = None
 
         for r in results:
             self.standings_drivers[r.driver_id] = (

@@ -107,7 +107,10 @@ def simulate_race(
     base_lap_time: float = 95.0,
     pit_stop_time: float = 25.0,
     player_strategy: Optional[Dict[str, List[str]]] = None,
+    grid_order: Optional[List[str]] = None,
 ) -> Tuple[List[RaceResult], List[RaceEvent]]:
+
+    grid_pos = {did: i for i, did in enumerate(grid_order)} if grid_order else None
 
     states: List[DriverRaceState] = []
     for drv in drivers:
@@ -119,9 +122,13 @@ def simulate_race(
         else:
             strategy = pick_strategy(drv, team, track)
         st = DriverRaceState(drv, team, strategy, base_lap_time)
-        qual_noise = random.gauss(0, 0.4)
-        pace_penalty = (90.0 - st.pace_rating()) * 0.05
-        st.total_time = qual_noise + pace_penalty
+        if grid_pos is not None and drv.id in grid_pos:
+            # largada a partir do grid da classificação (cada posição = pequena vantagem)
+            st.total_time = grid_pos[drv.id] * 0.20 + random.gauss(0, 0.08)
+        else:
+            qual_noise = random.gauss(0, 0.4)
+            pace_penalty = (90.0 - st.pace_rating()) * 0.05
+            st.total_time = qual_noise + pace_penalty
         states.append(st)
 
     states.sort(key=lambda s: s.total_time)

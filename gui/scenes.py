@@ -335,7 +335,7 @@ class CareerScene(Scene):
         car = self.app.career
         if car.season_complete():
             return
-        self.app.push(SimulatingScene(self.app))
+        self.app.push(QualifyingScene(self.app))
 
     def _end_season(self):
         summary = self.app.career.end_of_season()
@@ -537,6 +537,123 @@ class CareerScene(Scene):
                       T.TEXT if is_me else T.TEXT_DIM, (x + 78, ry - 1))
             draw_text(surf, f"{pts} pts", f.small, pcol, (x + w - 24, ry), right=True)
             ry += 36
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CLASSIFICAÇÃO (qualifying)
+# ══════════════════════════════════════════════════════════════════════════════
+SEG_COLOR = {"Q3": T.PURPLE, "Q2": T.ACCENT_2, "Q1": T.TEXT_DIM, "Q": T.TEXT_DIM}
+
+
+class QualifyingScene(Scene):
+    def on_enter(self):
+        f = self.app.fonts
+        car = self.app.career
+        is_wet = random.random() < 0.15
+        self.quali = car.run_qualifying(is_wet=is_wet)
+        self.is_wet = is_wet
+        self.my_id = (car.player_driver.id if self.app.profile.mode == "driver" else None)
+        self.my_team = (car.player_team.id if self.app.profile.mode != "driver" else None)
+        self.scroll = 0
+        self.t = 0.0
+        rows = self.quali["rows"] if self.quali else []
+        self.visible = (_RT_H - _RT_HEAD - 6) // _RT_ROW
+        self.max_scroll = max(0, len(rows) - self.visible)
+        idx = next((i for i, r in enumerate(rows)
+                    if r["driver_id"] == self.my_id or
+                    (self.my_team and self._is_my_team(r))), 0)
+        self.scroll = max(0, min(self.max_scroll, idx - self.visible // 2))
+        self.go_btn = Button((T.WIDTH // 2 - 150, T.HEIGHT - 64, 300, 50),
+                             "IR PARA A CORRIDA", self._to_race, f.h2, icon="play")
+
+    def _is_my_team(self, row):
+        car = self.app.career
+        d = next((x for x in car.all_drivers if x.id == row["driver_id"]), None)
+        return d is not None and d.team_id == self.my_team
+
+    def _to_race(self):
+        self.app.replace(SimulatingScene(self.app))
+
+    def update(self, dt):
+        self.t += dt
+
+    def handle(self, event):
+        self.go_btn.handle(event)
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if event.button == 4:
+                self.scroll = max(0, self.scroll - 1)
+            elif event.button == 5:
+                self.scroll = min(self.max_scroll, self.scroll + 1)
+
+    def draw(self, surf):
+        gradient_bg(surf)
+        f = self.app.fonts
+        x, y, w, h = _RT_X, _RT_Y, _RT_W, _RT_H
+        fmt = self.quali["format"] if self.quali else "single"
+        title = "CLASSIFICAÇÃO — Q1 / Q2 / Q3" if fmt == "q1q2q3" else "CLASSIFICAÇÃO"
+        draw_text(surf, title, f.h1, T.ACCENT, (x, 44))
+        if self.is_wet:
+            chip(surf, "PISTA MOLHADA", (x + 520, 48), f.small, T.BG, T.ACCENT_2)
+
+        panel(surf, (x, y, w, h), T.BG_PANEL)
+        cP, cN, cT, cTime, cGap, cSeg = x+22, x+66, x+330, x+560, x+690, x+w-24
+        draw_text(surf, "POS", f.tiny, T.TEXT_DIM, (cP, y+16))
+        draw_text(surf, "PILOTO", f.tiny, T.TEXT_DIM, (cN, y+16))
+        draw_text(surf, "EQUIPE", f.tiny, T.TEXT_DIM, (cT, y+16))
+        draw_text(surf, "TEMPO", f.tiny, T.TEXT_DIM, (cTime, y+16))
+        draw_text(surf, "GAP", f.tiny, T.TEXT_DIM, (cGap, y+16))
+        draw_text(surf, "FASE", f.tiny, T.TEXT_DIM, (cSeg, y+16), right=True)
+        pygame.draw.line(surf, T.LINE, (x+14, y+_RT_HEAD-4), (x+w-14, y+_RT_HEAD-4), 1)
+
+        rows = self.quali["rows"] if self.quali else []
+        prev = surf.get_clip()
+        surf.set_clip(pygame.Rect(x, y+_RT_HEAD, w, h-_RT_HEAD))
+        ry = y + _RT_HEAD + 4
+        for r in rows[self.scroll:self.scroll + self.visible + 1]:
+            is_me = (r["driver_id"] == self.my_id) or (self.my_team and self._is_my_team(r))
+            row = pygame.Rect(x+12, ry-3, w-24, _RT_ROW-2)
+            if is_me:
+                pygame.draw.rect(surf, T.BG_PANEL_2, row, border_radius=6)
+                pygame.draw.rect(surf, T.ACCENT, row, width=2, border_radius=6)
+            pcol = T.GOLD if r["pos"] == 1 else (T.TEXT if is_me else T.TEXT_DIM)
+            pole = (r["pos"] == 1)
+            draw_text(surf, "POLE" if pole else f"{r['pos']}", f.small,
+                      T.GOLD if pole else pcol, (cP, ry))
+            draw_text(surf, r["name"], f.small, T.TEXT if is_me else T.TEXT, (cN, ry))
+            draw_text(surf, r["team_name"], f.tiny, T.TEXT_FAINT, (cT, ry+2))
+            mins = int(r["time"] // 60)
+            secs = r["time"] - mins*60
+            draw_text(surf, f"{mins}:{secs:06.3f}", f.small, pcol, (cTime, ry))
+            gap = r.get("gap", 0)
+            draw_text(surf, "—" if gap <= 0 else f"+{gap:.3f}", f.small,
+                      T.TEXT_FAINT, (cGap, ry))
+            seg = r.get("segment", "Q")
+            draw_text(surf, seg, f.tiny, SEG_COLOR.get(seg, T.TEXT_DIM), (cSeg, ry), right=True)
+            ry += _RT_ROW
+        surf.set_clip(prev)
+        if self.max_scroll > 0:
+            th = h - _RT_HEAD - 8
+            kh = max(24, int(th * self.visible / len(rows)))
+            ky = y + _RT_HEAD + 4 + int((th - kh) * self.scroll / self.max_scroll)
+            pygame.draw.rect(surf, T.ACCENT, (x+w-8, ky, 4, kh), border_radius=2)
+
+        # painel lateral: sua largada
+        ex, ew = x + w + 20, T.WIDTH - (x + w + 20) - 40
+        panel(surf, (ex, y, ew, h), T.BG_PANEL)
+        draw_text(surf, "SUA LARGADA", f.tiny, T.ACCENT, (ex+18, y+16))
+        my = next((r for r in rows if (r["driver_id"] == self.my_id) or
+                   (self.my_team and self._is_my_team(r))), None)
+        if my:
+            draw_text(surf, f"P{my['pos']}", f.big_num,
+                      T.GOLD if my['pos'] == 1 else T.TEXT, (ex+18, y+44))
+            draw_text(surf, "na grade de largada", f.small, T.TEXT_DIM, (ex+18, y+108))
+            if fmt == "q1q2q3":
+                draw_text(surf, f"Eliminado em: {my.get('segment','Q3')}", f.small,
+                          SEG_COLOR.get(my.get('segment'), T.TEXT_DIM), (ex+18, y+140))
+        if fmt == "q1q2q3":
+            draw_text(surf, "Q1 18min · Q2 15min · Q3 12min", f.tiny, T.TEXT_FAINT,
+                      (ex+18, y+h-30))
+        self.go_btn.draw(surf)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
