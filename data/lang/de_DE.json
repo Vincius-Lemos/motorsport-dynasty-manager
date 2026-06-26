@@ -191,7 +191,18 @@
     "type_not_renewed": "HINWEIS — VERTRAG WIRD NICHT VERLÄNGERT",
     "insufficient": "Unzureichende Mittel für Strafe (€{amount}). Du hast Schulden.",
     "accepted": "Angebot angenommen: {team}",
-    "not_renewed_notify": "Vertrag mit {team} wird nicht verlängert."
+    "not_renewed_notify": "Vertrag mit {team} wird nicht verlängert.",
+    "desc_step_up": "{team} will dich in {series}!",
+    "desc_step_down": "{team} bietet dir eine Führungsrolle in {series}.",
+    "desc_lateral_better": "{team} will dich (besseres Auto: {perf}).",
+    "desc_lateral_worse": "{team} bietet ein höheres Gehalt.",
+    "desc_fired": "Dein Team entlässt dich. {team} kann dich aufnehmen.",
+    "fired_msg1": "{team}s Hauptsponsor droht mit Rückzug — sie brauchen einen neuen Fahrer.",
+    "fired_msg2": "{team}s Vorstand hat eine neue Fahrerpaarung beschlossen.",
+    "fired_msg3": "{team} hat ein Angebot von einem Zahlfahrer — ein Platz muss frei werden.",
+    "not_ren_msg1": "{team} teilt mit, dass dein Vertrag am Saisonende nicht verlängert wird.",
+    "not_ren_msg2": "{team}s Vorstand entschied sich für eine andere Fahrerpaarung.",
+    "not_ren_msg3": "{team} sucht Alternativen — dein Vertrag wird nicht verlängert."
   },
   "load": {
     "title": "Verfügbare Spielstände",
@@ -393,7 +404,14 @@
     "cat_injury": "VERLETZUNG",
     "cat_promotion": "KARRIERE",
     "cat_market": "MARKT",
-    "no_news": "Noch keine Neuigkeiten."
+    "no_news": "Noch keine Neuigkeiten.",
+    "race_win": "{driver} gewinnt {race_type} in {track}!",
+    "injury": "{driver} verletzt — fehlt {races} Rennen.",
+    "season_end": "Saison {year} abgeschlossen — {driver} beendete auf P{pos}.",
+    "champion_promotes": "{driver} ist Meister in {series}! Aufstieg erforderlich.",
+    "contract_penalty": "Vertragsstrafe: -€{amount}",
+    "firing_penalty": "Entlassungsabfindung erhalten: +€{amount}",
+    "contract_signed": "{driver} hat bei {team} für {series} unterschrieben."
   },
   "clt": {
     "title": "KRITISCHE SITUATION",

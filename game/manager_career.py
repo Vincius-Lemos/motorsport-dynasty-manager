@@ -21,6 +21,7 @@ from .race_engine import simulate_race
 from . import injuries as inj
 from . import super_licence as sl
 from . import academies as acad
+from .i18n import t as _t
 
 
 class ManagerCareer:
@@ -189,6 +190,7 @@ class ManagerCareer:
                 type("Ev", (), {"lap": 0, "event_type": "fp1_bonus",
                                 "description": f"FP1: {ev['driver']} +{ev['sl_pts']} pts SL",
                                 "affects_driver": None})())
+        self._add_news_from_race(results, events, "race", track.track_name)
         return results, meta_events
 
     def is_sprint_feature_weekend(self) -> bool:
@@ -225,7 +227,7 @@ class ManagerCareer:
                 d.total_points += r.points
                 d.gain_race_xp(6 if not r.dnf else 2)
         self._feature_grid = [r.driver_id for r in sorted(results, key=lambda r: r.position)]
-        self._add_news_from_race(results, events, "sprint")
+        self._add_news_from_race(results, events, "sprint", track.track_name)
         return results, events
 
     def simulate_feature_race(self, player_strategy=None) -> Tuple[list, list]:
@@ -268,17 +270,20 @@ class ManagerCareer:
         track.completed = True
         track.results = results
         self.season.current_round += 1
-        self._add_news_from_race(results, events, "feature")
+        self._add_news_from_race(results, events, "feature", track.track_name)
         return results, events
 
-    def _add_news_from_race(self, results: list, events: list, race_type: str = "race"):
+    def _add_news_from_race(self, results: list, events: list, race_type: str = "race",
+                            track_name: str = "?"):
         rnd = self.season.current_round if self.season else 0
         winner = next((r for r in results if r.position == 1 and not r.dnf), None)
         if winner:
-            label = {"sprint": "Sprint", "feature": "Feature Race"}.get(race_type, "Corrida")
-            track_name = self.current_round().track_name if self.current_round() else "?"
+            label = {"sprint": _t("simulating.sprint", "Sprint"),
+                     "feature": _t("simulating.feature", "Feature Race")}.get(
+                         race_type, _t("simulating.race", "Race"))
             self._push_news("race",
-                f"{winner.driver_name} vence a {label} em {track_name}!",
+                _t("news.race_win", "{driver} wins {race_type} at {track}!",
+                   driver=winner.driver_name, race_type=label, track=track_name),
                 driver_id=winner.driver_id, team_id=winner.team_id, round_number=rnd)
         for ev in events:
             etype = getattr(ev, "event_type", "")
@@ -287,7 +292,8 @@ class ManagerCareer:
         for d in self.all_drivers:
             if d.is_injured:
                 self._push_news("injury",
-                    f"{d.name} lesionado — fora por {d.injury_races_remaining} corrida(s).",
+                    _t("news.injury", "{driver} injured — out for {races} race(s).",
+                       driver=d.name, races=d.injury_races_remaining),
                     driver_id=d.id, round_number=rnd)
 
     def _push_news(self, category: str, headline: str, body: str = "",

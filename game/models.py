@@ -88,12 +88,21 @@ class Driver:
 
         if gap > 0 and age_factor > 0:
             growth = gap * 0.22 * age_factor * xp_factor
-            self.speed       = min(99, self.speed       + max(0, round(growth * 0.30)))
-            self.consistency = min(99, self.consistency + max(0, round(growth * 0.24)))
-            self.tyre_mgmt   = min(99, self.tyre_mgmt   + max(0, round(growth * 0.18)))
-            self.overtaking  = min(99, self.overtaking  + max(0, round(growth * 0.14)))
-            self.defence     = min(99, self.defence     + max(0, round(growth * 0.08)))
-            self.rain        = min(99, self.rain        + max(0, round(growth * 0.06)))
+            sp = max(0, round(growth * 0.30))
+            co = max(0, round(growth * 0.24))
+            tm = max(0, round(growth * 0.18))
+            ov = max(0, round(growth * 0.14))
+            df = max(0, round(growth * 0.08))
+            rn = max(0, round(growth * 0.06))
+            # Guarantee at least +1 speed when there's remaining potential
+            if sp + co + tm + ov + df + rn == 0:
+                sp = 1
+            self.speed       = min(99, self.speed       + sp)
+            self.consistency = min(99, self.consistency + co)
+            self.tyre_mgmt   = min(99, self.tyre_mgmt   + tm)
+            self.overtaking  = min(99, self.overtaking  + ov)
+            self.defence     = min(99, self.defence     + df)
+            self.rain        = min(99, self.rain        + rn)
         # feedback técnico sempre melhora um pouco com experiência (até veterano)
         if self.age <= 34 and self.feedback < 99:
             self.feedback = min(99, self.feedback + (1 if self.experience >= 60 else 0))

@@ -191,7 +191,18 @@
     "type_not_renewed": "NOTICE — CONTRACT NOT BEING RENEWED",
     "insufficient": "Insufficient funds for penalty (€{amount}). You will have debt.",
     "accepted": "Offer accepted: {team}",
-    "not_renewed_notify": "Contract with {team} will not be renewed."
+    "not_renewed_notify": "Contract with {team} will not be renewed.",
+    "desc_step_up": "{team} wants you in {series}!",
+    "desc_step_down": "{team} offers you a lead role in {series}.",
+    "desc_lateral_better": "{team} wants you (better car: {perf}).",
+    "desc_lateral_worse": "{team} offers a higher salary.",
+    "desc_fired": "Your team drops you. {team} can absorb you.",
+    "fired_msg1": "{team}'s sponsor threatened to pull funding — they need a new driver.",
+    "fired_msg2": "{team}'s board decided to change the driver lineup.",
+    "fired_msg3": "{team} received a pay-driver offer and needs to free up a seat.",
+    "not_ren_msg1": "{team} informs that your contract will not be renewed at season end.",
+    "not_ren_msg2": "{team}'s board decided to pursue a different driver lineup.",
+    "not_ren_msg3": "{team} will look for alternatives — your contract will not be renewed."
   },
   "load": {
     "title": "Available saves",
@@ -393,7 +404,14 @@
     "cat_injury": "INJURY",
     "cat_promotion": "CAREER",
     "cat_market": "MARKET",
-    "no_news": "No news yet."
+    "no_news": "No news yet.",
+    "race_win": "{driver} wins {race_type} at {track}!",
+    "injury": "{driver} injured — out for {races} race(s).",
+    "season_end": "Season {year} completed — {driver} finished P{pos}.",
+    "champion_promotes": "{driver} is champion of {series}! Must move up.",
+    "contract_penalty": "Contract break penalty: -€{amount}",
+    "firing_penalty": "Dismissal penalty received: +€{amount}",
+    "contract_signed": "{driver} signed with {team} for {series}."
   },
   "clt": {
     "title": "CRITICAL SITUATION",

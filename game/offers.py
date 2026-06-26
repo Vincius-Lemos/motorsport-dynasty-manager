@@ -13,6 +13,7 @@ from typing import Optional, List
 from .models import Team, Driver
 from .career import SERIES_PROGRESSION, load_series, load_teams_for_series
 from . import super_licence as sl
+from .i18n import t as _t
 
 OFFER_CHANCE_PER_RACE = 0.30   # base 30 % chance after each race
 
@@ -189,19 +190,18 @@ def generate_offer(career) -> Optional[dict]:
     # ── Fired ────────────────────────────────────────────────────────────────
     if offer_type == "fired":
         msg_options = [
-            f"Seu patrocinador principal ameaca retirar verba — {pt.name} pediu que voce busque outra equipe.",
-            f"O conselho de {pt.name} decidiu mudar a linha de pilotos.",
-            f"{pt.name} recebeu uma proposta de piloto pagante e precisam abrir uma vaga.",
+            _t("offer.fired_msg1", "{team}'s sponsor threatened to pull funding — they need a new driver.", team=pt.name),
+            _t("offer.fired_msg2", "{team}'s board decided to change the driver lineup.", team=pt.name),
+            _t("offer.fired_msg3", "{team} received a pay-driver offer and needs to free up a seat.", team=pt.name),
         ]
         others = [t for t in career.all_teams if t.id != pt.id]
         target = random.choice(others[-3:])
         salary = _estimate_salary(p_driver, target, current, premium=0.9)
         offer = _build_offer("fired", target, current, salary, 1, pt)
-        offer["description"] = random.choice(msg_options) + f"\n  {target.name} pode absorver voce."
+        offer["description"] = random.choice(msg_options)
         offer["forced"] = True
         offer["is_dismissal"] = True
         offer["dismissal_type"] = "fired"
-        # Multa por demissão imediata: equipe paga salário × anos restantes de contrato
         remaining = p_driver.contract_years if p_driver else 0
         offer["penalty_to_player"] = (p_driver.salary if p_driver else 0) * max(1, remaining)
         return offer
@@ -224,9 +224,9 @@ def generate_offer(career) -> Optional[dict]:
     # ── Not renewed ──────────────────────────────────────────────────────────────
     if offer_type == "not_renewed":
         msg_options = [
-            f"{pt.name} informa que nao renovara seu contrato ao fim da temporada.",
-            f"Diretoria de {pt.name} decidiu seguir com nova alinhamento de pilotos.",
-            f"{pt.name} vai buscar alternativas — seu contrato nao sera renovado.",
+            _t("offer.not_ren_msg1", "{team} informs that your contract will not be renewed at season end.", team=pt.name),
+            _t("offer.not_ren_msg2", "{team}'s board decided to pursue a different driver lineup.", team=pt.name),
+            _t("offer.not_ren_msg3", "{team} will look for alternatives — your contract will not be renewed.", team=pt.name),
         ]
         offer = _build_offer("not_renewed", pt, current, p_driver.salary if p_driver else 0, 0, pt)
         offer["description"] = random.choice(msg_options)
@@ -272,13 +272,11 @@ def _build_offer(otype: str, team: Team, series_id: str,
                  salary: int, years: int, pt: Team) -> dict:
     label = _series_label(series_id)
     descriptions = {
-        "step_up":       f"{team.name} quer voce na {label}! Seu trabalho chamou a atencao deles.",
-        "step_down":     f"{team.name} ({label}) oferece uma vaga de lideranca com carro competitivo.",
-        "lateral_better": (f"{team.name} quer voce na mesma categoria.\n"
-                           f"  Carro deles: {team.car_performance:.0f} vs atual: {pt.car_performance:.0f}."),
-        "lateral_worse":  (f"{team.name} oferece salario maior, mas carro inferior.\n"
-                           f"  Salario: EUR {salary:,.0f}/ano."),
-        "fired":          f"{team.name} pode absorver voce.",
+        "step_up":        _t("offer.desc_step_up",       team=team.name, series=label),
+        "step_down":      _t("offer.desc_step_down",      team=team.name, series=label),
+        "lateral_better": _t("offer.desc_lateral_better", team=team.name, perf=f"{team.car_performance:.0f}"),
+        "lateral_worse":  _t("offer.desc_lateral_worse",  team=team.name),
+        "fired":          _t("offer.desc_fired",           team=team.name),
     }
     return {
         "type":               otype,

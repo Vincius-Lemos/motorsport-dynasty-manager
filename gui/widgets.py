@@ -6,6 +6,26 @@ import pygame
 from . import theme as T
 
 
+def soft_rect(surf, rect, color, radius=8, width=0):
+    """Rounded rectangle with smoother edges than pygame's direct draw."""
+    rect = pygame.Rect(rect)
+    if rect.w <= 0 or rect.h <= 0:
+        return rect
+    scale = 3
+    layer = pygame.Surface((rect.w * scale, rect.h * scale), pygame.SRCALPHA)
+    col = color if len(color) == 4 else (*color, 255)
+    pygame.draw.rect(
+        layer,
+        col,
+        layer.get_rect(),
+        width=width * scale,
+        border_radius=max(0, radius * scale),
+    )
+    layer = pygame.transform.smoothscale(layer, rect.size)
+    surf.blit(layer, rect.topleft)
+    return rect
+
+
 def draw_text(surf, text, font, color, pos, center=False, right=False):
     img = font.render(str(text), True, color)
     rect = img.get_rect()
@@ -21,12 +41,12 @@ def draw_text(surf, text, font, color, pos, center=False, right=False):
 
 def panel(surf, rect, color=T.BG_PANEL, radius=12, border=None, border_w=1):
     rect = pygame.Rect(rect)
-    pygame.draw.rect(surf, color, rect, border_radius=radius)
+    soft_rect(surf, rect, color, radius=radius)
     # subtle 1-pixel top-edge highlight for depth
     hi = T.lerp(color, (255, 255, 255), 0.07)
     pygame.draw.line(surf, hi, (rect.x + radius, rect.y + 1), (rect.right - radius, rect.y + 1), 1)
     if border:
-        pygame.draw.rect(surf, border, rect, width=border_w, border_radius=radius)
+        soft_rect(surf, rect, border, radius=radius, width=border_w)
     return rect
 
 
@@ -34,8 +54,7 @@ def accent_strip(surf, rect, color=T.ACCENT, radius=12):
     """Painel com faixa de acento à esquerda."""
     rect = pygame.Rect(rect)
     panel(surf, rect, radius=radius)
-    pygame.draw.rect(surf, color, (rect.x, rect.y, 6, rect.height),
-                     border_top_left_radius=radius, border_bottom_left_radius=radius)
+    soft_rect(surf, (rect.x, rect.y, 6, rect.height), color, radius=min(radius, 6))
 
 
 def stat_bar(surf, x, y, w, label, value, maxv=99, color=T.ACCENT, fonts=None, anim=1.0):
@@ -282,10 +301,9 @@ class Button:
                 # glow
                 if self.anim > 0.02:
                     glow = pygame.Surface((rect.w + 16, rect.h + 16), pygame.SRCALPHA)
-                    pygame.draw.rect(glow, (*self.color, int(70 * self.anim)),
-                                     glow.get_rect(), border_radius=14)
+                    soft_rect(glow, glow.get_rect(), (*self.color, int(70 * self.anim)), radius=14)
                     surf.blit(glow, (rect.x - 8, rect.y - 8))
-            pygame.draw.rect(surf, base, rect, border_radius=8)
+            soft_rect(surf, rect, base, radius=8)
             tc = self.text_color if self.enabled else T.TEXT_FAINT
         else:
             base = T.BG_PANEL_2 if self.kind == "ghost" else (60, 25, 30)
@@ -294,8 +312,8 @@ class Button:
                 base = T.lerp(base, (255, 255, 255), 0.12 * self.anim)
                 edge = T.lerp(edge, T.ACCENT if self.kind == "ghost" else (255, 120, 130),
                               self.anim)
-            pygame.draw.rect(surf, base, rect, border_radius=8)
-            pygame.draw.rect(surf, edge, rect, width=1, border_radius=8)
+            soft_rect(surf, rect, base, radius=8)
+            soft_rect(surf, rect, edge, radius=8, width=1)
             tc = T.TEXT if self.enabled else T.TEXT_FAINT
         self.rect_draw = rect
         # Ícone vetorial à esquerda do texto (se for um nome conhecido)
@@ -343,8 +361,8 @@ class TextInput:
     def draw(self, surf):
         self._blink = (self._blink + 1) % 60
         border = T.ACCENT if self.active else T.LINE
-        pygame.draw.rect(surf, T.BG_INPUT, self.rect, border_radius=6)
-        pygame.draw.rect(surf, border, self.rect, width=2, border_radius=6)
+        soft_rect(surf, self.rect, T.BG_INPUT, radius=7)
+        soft_rect(surf, self.rect, border, radius=7, width=2)
         if self.text:
             draw_text(surf, self.text, self.font, T.TEXT,
                       (self.rect.x + 12, self.rect.centery - self.font.get_height() // 2))
@@ -405,10 +423,10 @@ class SelectList:
             y = self.rect.y + (i - self.scroll) * self.row_h
             row = pygame.Rect(self.rect.x, y, self.rect.width, self.row_h - 4)
             if i == self.selected:
-                pygame.draw.rect(surf, T.BG_PANEL_2, row, border_radius=6)
-                pygame.draw.rect(surf, T.ACCENT, row, width=2, border_radius=6)
+                soft_rect(surf, row, T.BG_PANEL_2, radius=7)
+                soft_rect(surf, row, T.ACCENT, radius=7, width=2)
             elif i == self.hover_idx:
-                pygame.draw.rect(surf, T.BG_PANEL, row, border_radius=6)
+                soft_rect(surf, row, T.BG_PANEL, radius=7)
             if self.render_row:
                 self.render_row(surf, self.items[i], row, i == self.selected, fonts)
             else:
@@ -421,6 +439,6 @@ def chip(surf, text, pos, font, fg, bg, padx=10, pady=4):
     w = font.size(text)[0] + padx * 2
     h = font.get_height() + pady * 2
     rect = pygame.Rect(pos[0], pos[1], w, h)
-    pygame.draw.rect(surf, bg, rect, border_radius=h // 2)
+    soft_rect(surf, rect, bg, radius=h // 2)
     draw_text(surf, text, font, fg, rect.center, center=True)
     return rect

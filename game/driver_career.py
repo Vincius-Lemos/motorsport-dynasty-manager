@@ -22,6 +22,7 @@ from . import super_licence as sl
 from . import injuries as inj
 from . import academies as acad
 from . import housing as hsng
+from .i18n import t as _t
 
 
 class DriverCareer:
@@ -281,7 +282,7 @@ class DriverCareer:
                 type("Ev", (), {"lap": 0, "event_type": "fp1_bonus",
                                 "description": f"FP1: {ev['driver']} +{ev['sl_pts']} pts SL",
                                 "affects_driver": None})())
-        self._add_news_from_race(results, events, "race")
+        self._add_news_from_race(results, events, "race", track.track_name)
         return results, meta_events
 
     def is_sprint_feature_weekend(self) -> bool:
@@ -320,7 +321,7 @@ class DriverCareer:
                 d.gain_race_xp(6 if not r.dnf else 2)
         # Feature grid = ordem da sprint
         self._feature_grid = [r.driver_id for r in sorted(results, key=lambda r: r.position)]
-        self._add_news_from_race(results, events, "sprint")
+        self._add_news_from_race(results, events, "sprint", track.track_name)
         return results, events
 
     def simulate_feature_race(self, player_strategy=None) -> Tuple[list, list]:
@@ -371,27 +372,32 @@ class DriverCareer:
         track.completed = True
         track.results = results
         self.season.current_round += 1
-        self._add_news_from_race(results, events, "feature")
+        self._add_news_from_race(results, events, "feature", track.track_name)
         return results, events
 
-    def _add_news_from_race(self, results: list, events: list, race_type: str = "race"):
+    def _add_news_from_race(self, results: list, events: list, race_type: str = "race",
+                            track_name: str = "?"):
         """Gera notícias automáticas baseadas no resultado."""
         rnd = self.season.current_round if self.season else 0
         winner = next((r for r in results if r.position == 1 and not r.dnf), None)
         if winner:
-            label = {"sprint": "Sprint", "feature": "Feature Race"}.get(race_type, "Corrida")
-            self._push_news("race", f"{winner.driver_name} vence a {label} em {self.current_round().track_name if self.current_round() else '?'}!",
-                           driver_id=winner.driver_id, team_id=winner.team_id, round_number=rnd)
+            label = {"sprint": _t("simulating.sprint", "Sprint"),
+                     "feature": _t("simulating.feature", "Feature Race")}.get(
+                         race_type, _t("simulating.race", "Race"))
+            self._push_news("race",
+                _t("news.race_win", "{driver} wins {race_type} at {track}!",
+                   driver=winner.driver_name, race_type=label, track=track_name),
+                driver_id=winner.driver_id, team_id=winner.team_id, round_number=rnd)
         for ev in events:
             etype = getattr(ev, "event_type", "")
             if etype in ("engine_failure", "crash", "puncture"):
                 desc = getattr(ev, "description", "")
                 self._push_news("race", desc, round_number=rnd)
-        # Acidente grave: tira piloto da próxima rodada
         for d in self.all_drivers:
             if d.is_injured:
                 self._push_news("injury",
-                    f"{d.name} lesionado — fora por {d.injury_races_remaining} corrida(s).",
+                    _t("news.injury", "{driver} injured — out for {races} race(s).",
+                       driver=d.name, races=d.injury_races_remaining),
                     driver_id=d.id, round_number=rnd)
 
     def _push_news(self, category: str, headline: str, body: str = "",
@@ -504,13 +510,14 @@ class DriverCareer:
 
         # Notícia de fim de temporada
         self._push_news("promotion",
-            f"Temporada {self.career_year} encerrada — {self.player_driver.name} terminou em P{pos}.",
+            _t("news.season_end", "Season {year} completed — {driver} finished P{pos}.",
+               year=self.career_year, driver=self.player_driver.name, pos=pos),
             driver_id=self.player_driver.id, round_number=len(self.season.rounds))
 
         if is_champion and self.current_series_id in self._CHAMPION_MUST_PROMOTE:
             self._push_news("promotion",
-                f"{self.player_driver.name} e campeao de {self.series_rules['name']}! "
-                f"Obrigado a subir de categoria.",
+                _t("news.champion_promotes", "{driver} is champion of {series}! Must move up.",
+                   driver=self.player_driver.name, series=self.series_rules["name"]),
                 driver_id=self.player_driver.id, round_number=len(self.season.rounds))
 
         return {
@@ -532,16 +539,18 @@ class DriverCareer:
 
     def _advance_npcs(self):
         """Avança NPCs ao fim de temporada: SL, XP, idade."""
+        from .career import NPC_SL_RANGE, series_above
         drv_st = self.driver_standings()
         for rank, d, _pts in drv_st:
             if d.id == self.player_driver.id:
                 continue
-            # SL baseado na posição final
             sl.award_season_sl_points(d, self.current_series_id, rank, self.career_year)
             d.age_up()
             d.gain_race_xp(30)
-            # Salva estado para próxima temporada
             self._npc_state[d.id] = {
+                "driver": d,
+                "series": self.current_series_id,
+                "rank": rank,
                 "sl_pts": d.super_licence_points,
                 "sl_history": dict(d.sl_points_history),
                 "experience": d.experience,
@@ -555,6 +564,15 @@ class DriverCareer:
                 "feedback": d.feedback,
                 "potential": d.potential,
             }
+        # Identify NPCs eligible for promotion (top 5 finishers with enough SL)
+        next_series = series_above(self.current_series_id)
+        if next_series:
+            lo, _ = NPC_SL_RANGE.get(next_series, (0, 99))
+            for rank, d, _pts in drv_st[:5]:
+                if d.id == self.player_driver.id:
+                    continue
+                if d.super_licence_points >= lo:
+                    self._npc_state[d.id]["promote_to"] = next_series
 
     def breaking_contract_penalty(self) -> int:
         """Multa que o piloto paga ao sair de contrato ativo: salário × anos restantes."""
@@ -569,7 +587,8 @@ class DriverCareer:
         if penalty > 0:
             self.profile.personal_money -= penalty
             self._push_news("contract",
-                f"Multa de quebra de contrato: -€{penalty:,.0f}",
+                _t("news.contract_penalty", "Contract break penalty: -€{amount}",
+                   amount=f"{penalty:,.0f}"),
                 driver_id=self.player_driver.id if self.player_driver else None,
                 round_number=self.season.current_round if self.season else 0)
         return penalty
@@ -578,7 +597,8 @@ class DriverCareer:
         """Equipe paga multa ao piloto por demissão imediata."""
         self.profile.receive_salary(amount)
         self._push_news("contract",
-            f"Multa de demissão recebida: +€{amount:,.0f}",
+            _t("news.firing_penalty", "Dismissal penalty received: +€{amount}",
+               amount=f"{amount:,.0f}"),
             driver_id=self.player_driver.id if self.player_driver else None,
             round_number=self.season.current_round if self.season else 0)
 
@@ -589,7 +609,8 @@ class DriverCareer:
         self._contract_next_year = team_id
         self._contract_next_series = series_id
         self._push_news("contract",
-            f"{self.player_driver.name} assina contrato com {team_id} para {series_id}.",
+            _t("news.contract_signed", "{driver} signed with {team} for {series}.",
+               driver=self.player_driver.name, team=team_id, series=series_id),
             driver_id=self.player_driver.id, round_number=self.season.current_round if self.season else 0)
 
     def start_new_season(self, promote: bool, new_team_id: Optional[str] = None):
@@ -618,7 +639,7 @@ class DriverCareer:
 
         self._load_world(self.current_series_id)
 
-        # Aplica estado salvo de NPCs (ecossistema vivo)
+        # Aplica estado salvo de NPCs (ecossistema vivo — mesma série)
         for d in self.all_drivers:
             if d.id in self._npc_state:
                 st = self._npc_state[d.id]
@@ -629,6 +650,35 @@ class DriverCareer:
                 for attr in ("speed", "consistency", "rain", "overtaking",
                              "defence", "tyre_mgmt", "feedback", "potential"):
                     setattr(d, attr, max(getattr(d, attr), st.get(attr, 0)))
+
+        # Injeta NPCs promovidos de séries inferiores (ecossistema vivo)
+        promoted_npcs = [
+            st["driver"] for st in self._npc_state.values()
+            if st.get("promote_to") == self.current_series_id
+            and st.get("driver") is not None
+            and st["driver"].id != pd.id
+        ]
+        promoted_npcs.sort(key=lambda d: d.super_licence_points, reverse=True)
+        # Replace up to 3 of the lowest-ranked non-player drivers in non-player teams
+        if promoted_npcs:
+            replaceable = [d for d in self.all_drivers
+                           if d.id != pd.id and d.team_id is not None]
+            replaceable.sort(key=lambda d: d.overall)
+            for promo_drv in promoted_npcs[:3]:
+                if not replaceable:
+                    break
+                old = replaceable.pop(0)
+                # Update team assignment
+                promo_drv.team_id = old.team_id
+                promo_drv.contract_years = random.randint(1, 2)
+                for team in self.all_teams:
+                    if old.id in team.drivers:
+                        idx = team.drivers.index(old.id)
+                        team.drivers[idx] = promo_drv.id
+                        break
+                self.all_drivers.remove(old)
+                if promo_drv not in self.all_drivers:
+                    self.all_drivers.append(promo_drv)
 
         # Reinjeta jogador
         self.player_driver = pd
