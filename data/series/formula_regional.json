@@ -1,0 +1,29 @@
+{
+  "id": "formula_regional",
+  "name": "Formula Regional Championship",
+  "short_name": "FR",
+  "category_level": 1,
+  "season_year": 2027,
+  "cars_per_team": 2,
+  "max_teams": 10,
+  "budget_level": "low",
+  "promotion_spots": 3,
+  "relegation_spots": 0,
+  "promotes_to": "formula_3",
+  "rules": {
+    "pitstops_required": true,
+    "refueling": false,
+    "tyre_compounds": ["soft", "medium", "hard"],
+    "drs": false,
+    "ers": false,
+    "safety_car": true
+  },
+  "scoring": [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+  "base_lap_time_seconds": 95.0,
+  "pit_stop_time_seconds": 25.0,
+  "min_budget_to_enter": 0,
+  "super_licence_points": {
+    "1": 20, "2": 15, "3": 12, "4": 10, "5": 8,
+    "6": 5, "7": 5, "8": 3, "9": 3, "10": 2
+  }
+}

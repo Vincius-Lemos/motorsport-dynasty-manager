@@ -1,0 +1,124 @@
+{
+  "academies": [
+    {
+      "id": "ferrari_driver_academy",
+      "name": "Ferrari Driver Academy",
+      "short": "FDA",
+      "affiliated_team_f1": "f1_ferrari",
+      "pipeline_teams": ["f4_prema", "fr_prema", "f3_prema", "f2_prema"],
+      "benefits": {
+        "salary_discount": 0.25,
+        "potential_bonus_per_season": 3,
+        "development_speed_bonus": 0.15,
+        "fp1_access_chance": 0.40
+      },
+      "restrictions": {
+        "buyout_fee": 2000000,
+        "cannot_sign_with": ["f1_mercedes", "f1_redbull", "f1_mclaren"],
+        "min_contract_years": 2
+      },
+      "prestige": 95,
+      "annual_stipend": 200000
+    },
+    {
+      "id": "red_bull_junior",
+      "name": "Red Bull Junior Team",
+      "short": "RBJ",
+      "affiliated_team_f1": "f1_redbull",
+      "pipeline_teams": ["f4_vaf", "fr_vaf", "f3_hitech", "f2_hitech"],
+      "benefits": {
+        "salary_discount": 0.30,
+        "potential_bonus_per_season": 4,
+        "development_speed_bonus": 0.20,
+        "fp1_access_chance": 0.35
+      },
+      "restrictions": {
+        "buyout_fee": 3000000,
+        "cannot_sign_with": ["f1_ferrari", "f1_mercedes", "f1_mclaren", "f1_alpine"],
+        "min_contract_years": 2
+      },
+      "prestige": 98,
+      "annual_stipend": 250000
+    },
+    {
+      "id": "mercedes_junior",
+      "name": "Mercedes Junior Programme",
+      "short": "MJP",
+      "affiliated_team_f1": "f1_mercedes",
+      "pipeline_teams": ["f4_us", "fr_art", "f3_art", "f2_art"],
+      "benefits": {
+        "salary_discount": 0.25,
+        "potential_bonus_per_season": 3,
+        "development_speed_bonus": 0.18,
+        "fp1_access_chance": 0.38
+      },
+      "restrictions": {
+        "buyout_fee": 2500000,
+        "cannot_sign_with": ["f1_ferrari", "f1_redbull"],
+        "min_contract_years": 2
+      },
+      "prestige": 96,
+      "annual_stipend": 220000
+    },
+    {
+      "id": "alpine_academy",
+      "name": "Alpine Academy",
+      "short": "ACA",
+      "affiliated_team_f1": "f1_alpine",
+      "pipeline_teams": ["fr_art", "f3_art", "f2_art"],
+      "benefits": {
+        "salary_discount": 0.20,
+        "potential_bonus_per_season": 2,
+        "development_speed_bonus": 0.12,
+        "fp1_access_chance": 0.25
+      },
+      "restrictions": {
+        "buyout_fee": 1500000,
+        "cannot_sign_with": ["f1_ferrari", "f1_redbull", "f1_mercedes"],
+        "min_contract_years": 1
+      },
+      "prestige": 82,
+      "annual_stipend": 150000
+    },
+    {
+      "id": "aston_martin_autosport",
+      "name": "Aston Martin Autosport BRDC",
+      "short": "AMB",
+      "affiliated_team_f1": "f1_aston",
+      "pipeline_teams": ["fr_carlin", "f3_carlin", "f2_carlin"],
+      "benefits": {
+        "salary_discount": 0.20,
+        "potential_bonus_per_season": 2,
+        "development_speed_bonus": 0.10,
+        "fp1_access_chance": 0.20
+      },
+      "restrictions": {
+        "buyout_fee": 1200000,
+        "cannot_sign_with": ["f1_ferrari", "f1_redbull", "f1_mercedes"],
+        "min_contract_years": 1
+      },
+      "prestige": 78,
+      "annual_stipend": 130000
+    },
+    {
+      "id": "williams_racing_academy",
+      "name": "Williams Racing Academy",
+      "short": "WRA",
+      "affiliated_team_f1": "f1_williams",
+      "pipeline_teams": ["fr_carlin", "f3_carlin"],
+      "benefits": {
+        "salary_discount": 0.15,
+        "potential_bonus_per_season": 2,
+        "development_speed_bonus": 0.08,
+        "fp1_access_chance": 0.15
+      },
+      "restrictions": {
+        "buyout_fee": 800000,
+        "cannot_sign_with": [],
+        "min_contract_years": 1
+      },
+      "prestige": 70,
+      "annual_stipend": 100000
+    }
+  ]
+}

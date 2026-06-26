@@ -1,0 +1,74 @@
+{
+  "teams": [
+    {
+      "id": "f4_prema",  "name": "Prema Racing",           "short": "PRM", "color": "#CC0000",
+      "chassis": 72, "aerodynamics": 70, "reliability": 74, "pit_crew": 68, "engineers": 66, "factory": 64, "reputation": 75,
+      "budget": 600000, "base_cost_per_race": 18000,
+      "sponsors": [{"name": "Ferrari Driver Academy", "value": 160000, "requirement": "top3_champion"}, {"name": "Sabelt", "value": 45000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_art",    "name": "ART Grand Prix",          "short": "ART", "color": "#0055AA",
+      "chassis": 70, "aerodynamics": 68, "reliability": 72, "pit_crew": 66, "engineers": 64, "factory": 62, "reputation": 70,
+      "budget": 550000, "base_cost_per_race": 16000,
+      "sponsors": [{"name": "Alpine Academy", "value": 140000, "requirement": "top4_champion"}, {"name": "Total Energies", "value": 40000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_campos", "name": "Campos Racing",           "short": "CAM", "color": "#008800",
+      "chassis": 62, "aerodynamics": 60, "reliability": 65, "pit_crew": 58, "engineers": 56, "factory": 54, "reputation": 52,
+      "budget": 380000, "base_cost_per_race": 12000,
+      "sponsors": [{"name": "Cepsa", "value": 85000, "requirement": "top6_champion"}, {"name": "Iberdrola", "value": 30000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_vaf",    "name": "Van Amersfoort Racing",   "short": "VAF", "color": "#FF6600",
+      "chassis": 65, "aerodynamics": 63, "reliability": 68, "pit_crew": 61, "engineers": 59, "factory": 57, "reputation": 58,
+      "budget": 420000, "base_cost_per_race": 13000,
+      "sponsors": [{"name": "Red Bull Junior", "value": 100000, "requirement": "top5_champion"}, {"name": "VAF Group", "value": 32000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_us",     "name": "US Racing",               "short": "USR", "color": "#660099",
+      "chassis": 68, "aerodynamics": 66, "reliability": 70, "pit_crew": 64, "engineers": 62, "factory": 60, "reputation": 64,
+      "budget": 480000, "base_cost_per_race": 14000,
+      "sponsors": [{"name": "Mercedes Junior", "value": 120000, "requirement": "top4_champion"}, {"name": "US Motorsport", "value": 36000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_bhaitech","name": "BHAitech",               "short": "BHA", "color": "#FF0066",
+      "chassis": 60, "aerodynamics": 58, "reliability": 63, "pit_crew": 56, "engineers": 54, "factory": 52, "reputation": 45,
+      "budget": 340000, "base_cost_per_race": 11000,
+      "sponsors": [{"name": "BHA Group", "value": 75000, "requirement": "top7_champion"}, {"name": "TechSport", "value": 28000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_fams",   "name": "FAMS Motorsport",         "short": "FAM", "color": "#006666",
+      "chassis": 58, "aerodynamics": 56, "reliability": 61, "pit_crew": 54, "engineers": 52, "factory": 50, "reputation": 40,
+      "budget": 300000, "base_cost_per_race": 10000,
+      "sponsors": [{"name": "FAMS Group", "value": 65000, "requirement": "top8_champion"}, {"name": "Italian F4", "value": 25000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_prema2", "name": "Prema Racing B",          "short": "PR2", "color": "#AA0000",
+      "chassis": 70, "aerodynamics": 68, "reliability": 72, "pit_crew": 66, "engineers": 64, "factory": 62, "reputation": 72,
+      "budget": 580000, "base_cost_per_race": 17000,
+      "sponsors": [{"name": "Prema Junior", "value": 150000, "requirement": "top3_champion"}, {"name": "Sabelt B", "value": 42000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_ironlynx","name": "Iron Lynx",              "short": "IRL", "color": "#CC6600",
+      "chassis": 63, "aerodynamics": 61, "reliability": 66, "pit_crew": 59, "engineers": 57, "factory": 55, "reputation": 50,
+      "budget": 360000, "base_cost_per_race": 11500,
+      "sponsors": [{"name": "Iron Capital", "value": 80000, "requirement": "top7_champion"}, {"name": "Lynx Tech", "value": 26000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f4_bvm",    "name": "BVM Racing",              "short": "BVM", "color": "#003366",
+      "chassis": 56, "aerodynamics": 54, "reliability": 59, "pit_crew": 52, "engineers": 50, "factory": 48, "reputation": 34,
+      "budget": 270000, "base_cost_per_race": 9500,
+      "sponsors": [{"name": "BVM Group", "value": 55000, "requirement": "top9_champion"}, {"name": "ItalSport", "value": 22000, "requirement": "none"}],
+      "is_player_team": false
+    }
+  ]
+}

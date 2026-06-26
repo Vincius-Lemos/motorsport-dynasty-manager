@@ -1,0 +1,31 @@
+{
+  "id": "formula_1",
+  "name": "Formula 1 World Championship",
+  "short_name": "F1",
+  "category_level": 4,
+  "cars_per_team": 2,
+  "max_teams": 10,
+  "budget_level": "elite",
+  "promotion_spots": 0,
+  "relegation_spots": 0,
+  "promotes_to": null,
+  "rules": {
+    "pitstops_required": true,
+    "refueling": false,
+    "tyre_compounds": ["soft", "medium", "hard"],
+    "drs": true,
+    "ers": true,
+    "safety_car": true
+  },
+  "scoring": [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+  "base_lap_time_seconds": 75.0,
+  "pit_stop_time_seconds": 21.0,
+  "min_budget_to_enter": 15000000,
+  "super_licence_required": true,
+  "super_licence_points_needed": 40,
+  "super_licence_min_age": 18,
+  "super_licence_points": {
+    "1": 40, "2": 40, "3": 30, "4": 25, "5": 20,
+    "6": 15, "7": 10, "8": 8, "9": 6, "10": 4
+  }
+}

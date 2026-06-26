@@ -1,0 +1,74 @@
+{
+  "teams": [
+    {
+      "id": "f2_prema",   "name": "Prema Racing",           "short": "PRM", "color": "#CC0000",
+      "chassis": 93, "aerodynamics": 91, "reliability": 89, "pit_crew": 91, "engineers": 89, "factory": 88, "reputation": 96,
+      "budget": 6500000, "base_cost_per_race": 200000,
+      "sponsors": [{"name": "Ferrari Driver Academy", "value": 2200000, "requirement": "top1_champion"}, {"name": "Prema Heritage", "value": 600000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_art",     "name": "ART Grand Prix",         "short": "ART", "color": "#0055AA",
+      "chassis": 90, "aerodynamics": 88, "reliability": 86, "pit_crew": 88, "engineers": 86, "factory": 86, "reputation": 91,
+      "budget": 5800000, "base_cost_per_race": 185000,
+      "sponsors": [{"name": "Alpine Academy", "value": 1900000, "requirement": "top3_champion"}, {"name": "Total Energies", "value": 520000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_dams",    "name": "DAMS",                   "short": "DAM", "color": "#0066CC",
+      "chassis": 88, "aerodynamics": 86, "reliability": 85, "pit_crew": 87, "engineers": 85, "factory": 85, "reputation": 88,
+      "budget": 5400000, "base_cost_per_race": 178000,
+      "sponsors": [{"name": "DAMS Heritage", "value": 1700000, "requirement": "top3_champion"}, {"name": "French Racing", "value": 480000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_invicta", "name": "Invicta Racing",         "short": "INV", "color": "#880088",
+      "chassis": 87, "aerodynamics": 85, "reliability": 84, "pit_crew": 86, "engineers": 84, "factory": 84, "reputation": 86,
+      "budget": 5100000, "base_cost_per_race": 172000,
+      "sponsors": [{"name": "Invicta Group", "value": 1600000, "requirement": "top3_champion"}, {"name": "Virtuosi Legacy", "value": 460000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_hitech",  "name": "Hitech Grand Prix",      "short": "HIT", "color": "#FF6600",
+      "chassis": 86, "aerodynamics": 84, "reliability": 82, "pit_crew": 85, "engineers": 83, "factory": 81, "reputation": 83,
+      "budget": 4800000, "base_cost_per_race": 165000,
+      "sponsors": [{"name": "Red Bull Junior", "value": 1500000, "requirement": "top4_champion"}, {"name": "Hitech Corp", "value": 420000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_mp",      "name": "MP Motorsport",          "short": "MPM", "color": "#FF0066",
+      "chassis": 84, "aerodynamics": 82, "reliability": 80, "pit_crew": 83, "engineers": 81, "factory": 79, "reputation": 79,
+      "budget": 4300000, "base_cost_per_race": 155000,
+      "sponsors": [{"name": "MP Group", "value": 1280000, "requirement": "top5_champion"}, {"name": "NL Invest", "value": 370000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_carlin",  "name": "Carlin Motorsport",      "short": "CAR", "color": "#660099",
+      "chassis": 85, "aerodynamics": 83, "reliability": 81, "pit_crew": 84, "engineers": 82, "factory": 80, "reputation": 81,
+      "budget": 4500000, "base_cost_per_race": 158000,
+      "sponsors": [{"name": "Carlin Family", "value": 1350000, "requirement": "top4_champion"}, {"name": "UK Motorsport", "value": 390000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_trident", "name": "Trident Motorsport",     "short": "TRI", "color": "#006666",
+      "chassis": 82, "aerodynamics": 80, "reliability": 78, "pit_crew": 81, "engineers": 79, "factory": 77, "reputation": 75,
+      "budget": 3900000, "base_cost_per_race": 145000,
+      "sponsors": [{"name": "Trident Group", "value": 1150000, "requirement": "top6_champion"}, {"name": "ItalFinance", "value": 340000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_campos",  "name": "Campos Racing",          "short": "CAM", "color": "#008800",
+      "chassis": 80, "aerodynamics": 78, "reliability": 76, "pit_crew": 79, "engineers": 77, "factory": 75, "reputation": 71,
+      "budget": 3600000, "base_cost_per_race": 138000,
+      "sponsors": [{"name": "Iberdrola", "value": 1050000, "requirement": "top7_champion"}, {"name": "Cepsa", "value": 310000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "f2_aix",     "name": "AIX Racing",             "short": "AIX", "color": "#996600",
+      "chassis": 78, "aerodynamics": 76, "reliability": 74, "pit_crew": 77, "engineers": 75, "factory": 73, "reputation": 66,
+      "budget": 3300000, "base_cost_per_race": 130000,
+      "sponsors": [{"name": "AIX Capital", "value": 950000, "requirement": "top8_champion"}, {"name": "Swiss Tech", "value": 280000, "requirement": "none"}],
+      "is_player_team": false
+    }
+  ]
+}

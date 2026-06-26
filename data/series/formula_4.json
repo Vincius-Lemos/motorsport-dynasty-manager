@@ -1,0 +1,28 @@
+{
+  "id": "formula_4",
+  "name": "Formula 4 Championship",
+  "short_name": "F4",
+  "category_level": 0,
+  "cars_per_team": 2,
+  "max_teams": 10,
+  "budget_level": "very_low",
+  "promotion_spots": 4,
+  "relegation_spots": 0,
+  "promotes_to": "formula_regional",
+  "rules": {
+    "pitstops_required": false,
+    "refueling": false,
+    "tyre_compounds": ["soft", "medium"],
+    "drs": false,
+    "ers": false,
+    "safety_car": true
+  },
+  "scoring": [25, 18, 15, 12, 10, 8, 6, 4, 2, 1],
+  "base_lap_time_seconds": 105.0,
+  "pit_stop_time_seconds": 28.0,
+  "min_budget_to_enter": 0,
+  "super_licence_points": {
+    "1": 12, "2": 10, "3": 8, "4": 6, "5": 5,
+    "6": 3, "7": 3, "8": 2, "9": 2, "10": 1
+  }
+}

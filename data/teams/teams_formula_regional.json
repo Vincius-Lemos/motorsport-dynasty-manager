@@ -1,0 +1,74 @@
+{
+  "teams": [
+    {
+      "id": "fr_prema",  "name": "Prema Racing",            "short": "PRM", "color": "#CC0000",
+      "chassis": 78, "aerodynamics": 76, "reliability": 80, "pit_crew": 75, "engineers": 74, "factory": 72, "reputation": 82,
+      "budget": 1800000, "base_cost_per_race": 55000,
+      "sponsors": [{"name": "Ferrari Driver Academy", "value": 500000, "requirement": "top3_champion"}, {"name": "Sabelt", "value": 120000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_art",    "name": "ART Grand Prix",          "short": "ART", "color": "#0055AA",
+      "chassis": 76, "aerodynamics": 75, "reliability": 78, "pit_crew": 73, "engineers": 72, "factory": 70, "reputation": 78,
+      "budget": 1600000, "base_cost_per_race": 50000,
+      "sponsors": [{"name": "Alpine Academy", "value": 420000, "requirement": "top4_champion"}, {"name": "Total Energies", "value": 100000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_campos", "name": "Campos Racing",           "short": "CAM", "color": "#008800",
+      "chassis": 70, "aerodynamics": 68, "reliability": 72, "pit_crew": 67, "engineers": 65, "factory": 62, "reputation": 60,
+      "budget": 1100000, "base_cost_per_race": 40000,
+      "sponsors": [{"name": "Iberdrola", "value": 280000, "requirement": "top6_champion"}, {"name": "Cepsa", "value": 80000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_vaf",    "name": "Van Amersfoort Racing",   "short": "VAF", "color": "#FF6600",
+      "chassis": 72, "aerodynamics": 70, "reliability": 74, "pit_crew": 69, "engineers": 67, "factory": 64, "reputation": 65,
+      "budget": 1250000, "base_cost_per_race": 44000,
+      "sponsors": [{"name": "Red Bull Junior", "value": 350000, "requirement": "top5_champion"}, {"name": "VAF Group", "value": 90000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_mp",     "name": "MP Motorsport",           "short": "MPM", "color": "#FF0066",
+      "chassis": 73, "aerodynamics": 71, "reliability": 75, "pit_crew": 70, "engineers": 68, "factory": 65, "reputation": 67,
+      "budget": 1300000, "base_cost_per_race": 45000,
+      "sponsors": [{"name": "MP Group", "value": 320000, "requirement": "top5_champion"}, {"name": "NL Racing", "value": 85000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_jenzer", "name": "Jenzer Motorsport",       "short": "JEN", "color": "#336600",
+      "chassis": 64, "aerodynamics": 62, "reliability": 67, "pit_crew": 61, "engineers": 59, "factory": 55, "reputation": 45,
+      "budget": 820000, "base_cost_per_race": 33000,
+      "sponsors": [{"name": "Swiss Finance", "value": 180000, "requirement": "top8_champion"}, {"name": "Jenzer Corp", "value": 60000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_phm",    "name": "PHM Racing by Charouz",   "short": "PHM", "color": "#CC6600",
+      "chassis": 67, "aerodynamics": 65, "reliability": 69, "pit_crew": 63, "engineers": 61, "factory": 58, "reputation": 50,
+      "budget": 950000, "base_cost_per_race": 36000,
+      "sponsors": [{"name": "Czech Invest", "value": 210000, "requirement": "top7_champion"}, {"name": "Charouz Group", "value": 70000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_carlin", "name": "Carlin Motorsport",       "short": "CAR", "color": "#660099",
+      "chassis": 75, "aerodynamics": 73, "reliability": 77, "pit_crew": 72, "engineers": 70, "factory": 67, "reputation": 70,
+      "budget": 1400000, "base_cost_per_race": 47000,
+      "sponsors": [{"name": "Carlin Family", "value": 380000, "requirement": "top4_champion"}, {"name": "UK Motorsport", "value": 95000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_bvm",    "name": "BVM Racing",              "short": "BVM", "color": "#003366",
+      "chassis": 62, "aerodynamics": 60, "reliability": 65, "pit_crew": 59, "engineers": 57, "factory": 53, "reputation": 38,
+      "budget": 700000, "base_cost_per_race": 30000,
+      "sponsors": [{"name": "BVM Group", "value": 150000, "requirement": "top9_champion"}, {"name": "ItalSport", "value": 55000, "requirement": "none"}],
+      "is_player_team": false
+    },
+    {
+      "id": "fr_drivex", "name": "Drivex School",           "short": "DRX", "color": "#990000",
+      "chassis": 60, "aerodynamics": 58, "reliability": 63, "pit_crew": 57, "engineers": 55, "factory": 51, "reputation": 33,
+      "budget": 640000, "base_cost_per_race": 28000,
+      "sponsors": [{"name": "Drivex Academy", "value": 130000, "requirement": "top10_champion"}, {"name": "Motor Campus", "value": 50000, "requirement": "none"}],
+      "is_player_team": false
+    }
+  ]
+}
