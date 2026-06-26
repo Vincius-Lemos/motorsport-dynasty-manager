@@ -212,6 +212,7 @@
     "car_perf": "Auto {perf}"
   },
   "standings": {
+    "scene_title": "Wertung",
     "subtitle": "scrollen zum Anzeigen des gesamten Feldes",
     "drivers": "FAHRER",
     "teams": "TEAMS"

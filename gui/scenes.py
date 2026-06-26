@@ -32,12 +32,12 @@ from game import housing as hsng
 from game.job_search import build_vacancy_list, apply_to_team
 from game.i18n import t, set_language, LANG_NAMES, current_language
 
-CLT_MESSAGES = {
-    "formula_4":        "Você virou fiscal de pátio no Autódromo de Interlagos.",
-    "formula_regional": "Agora é comentarista voluntário de F4 no YouTube.",
-    "formula_3":        "Comentarista de YouTube sobre F1 — de graça.",
-    "formula_2":        "Analista de telemetria para uma equipe de kart em Cascavel.",
-    "formula_1":        "Embaixador de marca de relógios suíços. Boa aposentadoria.",
+CLT_MSG_KEYS = {
+    "formula_4":        "clt.formula_4",
+    "formula_regional": "clt.formula_regional",
+    "formula_3":        "clt.formula_3",
+    "formula_2":        "clt.formula_2",
+    "formula_1":        "clt.formula_1",
 }
 
 SERIES_LABEL = {
@@ -70,6 +70,64 @@ def gradient_bg(surf):
     if _bg_surf is None or _bg_surf.get_size() != (w, h):
         _bg_surf = _build_bg(w, h)
     surf.blit(_bg_surf, (0, 0))
+
+
+def premium_bg(surf, t=0.0):
+    """Fundo mais cinematografico para menus e hubs."""
+    gradient_bg(surf)
+    w, h = surf.get_size()
+    haze = pygame.Surface((w, h), pygame.SRCALPHA)
+    pygame.draw.rect(haze, (4, 7, 14, 178), (0, 0, w, 170))
+    pygame.draw.rect(haze, (0, 0, 0, 175), (0, h - 155, w, 155))
+    pygame.draw.polygon(haze, (34, 51, 82, 62),
+                        [(0, 405), (w, 235), (w, 355), (0, 530)])
+    pygame.draw.polygon(haze, (255, 137, 6, 30),
+                        [(0, 548), (w, 470), (w, 555), (0, 632)])
+    surf.blit(haze, (0, 0))
+
+    # Pista/arquibancada abstrata no rodape, inspirada em menus de jogo de corrida.
+    pygame.draw.polygon(surf, (7, 9, 15), [(0, h), (w, h), (w, 565), (0, 650)])
+    pygame.draw.polygon(surf, (28, 30, 40), [(0, h), (w, h), (w, 645), (0, 705)])
+    pygame.draw.line(surf, (235, 238, 244), (0, 676), (w, 622), 2)
+    pygame.draw.line(surf, T.ACCENT, (0, 646), (w, 596), 2)
+    for x in range(-120, w + 120, 155):
+        shift = int((t * 65) % 155)
+        pygame.draw.line(surf, (225, 228, 235), (x + shift, 707), (x + 86 + shift, 698), 2)
+
+
+def glass_panel(surf, rect, accent=T.ACCENT, alpha=210, radius=10):
+    """Painel translucido com borda e brilho discreto."""
+    rect = pygame.Rect(rect)
+    sh = pygame.Surface((rect.w + 14, rect.h + 14), pygame.SRCALPHA)
+    pygame.draw.rect(sh, (0, 0, 0, 90), sh.get_rect(), border_radius=radius + 4)
+    surf.blit(sh, (rect.x - 7, rect.y - 5))
+    body = pygame.Surface((rect.w, rect.h), pygame.SRCALPHA)
+    pygame.draw.rect(body, (*T.BG_PANEL, alpha), body.get_rect(), border_radius=radius)
+    pygame.draw.rect(body, (*T.lerp(T.BG_PANEL, (255, 255, 255), 0.16), 90),
+                     (0, 0, rect.w, 1))
+    surf.blit(body, rect.topleft)
+    pygame.draw.rect(surf, T.LINE, rect, width=1, border_radius=radius)
+    pygame.draw.rect(surf, accent, (rect.x, rect.y, 5, rect.h),
+                     border_top_left_radius=radius, border_bottom_left_radius=radius)
+    return rect
+
+
+def draw_wrapped_text(surf, text, font, color, pos, max_width, line_gap=3, max_lines=3):
+    words = str(text).split()
+    lines, cur = [], ""
+    for word in words:
+        trial = word if not cur else cur + " " + word
+        if font.size(trial)[0] <= max_width:
+            cur = trial
+        else:
+            if cur:
+                lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    for i, line in enumerate(lines[:max_lines]):
+        draw_text(surf, line, font, color,
+                  (pos[0], pos[1] + i * (font.get_height() + line_gap)))
 
 
 def header(surf, app, subtitle=""):
@@ -116,21 +174,29 @@ class MenuScene(Scene):
 
     def _rebuild(self):
         f = self.app.fonts
-        cx = T.WIDTH // 2
-        w, h, gap = 360, 58, 16
-        y0 = 330
+        w, h, gap = 248, 238, 18
+        x0, y0 = 104, 314
+        self.menu_cards = [
+            {"rect": pygame.Rect(x0, y0, w, h), "title": t("menu.new_driver"),
+             "eyebrow": "CAREER", "desc": "Suba das bases ate o topo do automobilismo.",
+             "icon": "helmet", "color": T.ACCENT, "cb": lambda: self._new("driver")},
+            {"rect": pygame.Rect(x0 + (w + gap), y0, w, h), "title": t("menu.new_manager"),
+             "eyebrow": "TEAM", "desc": "Gerencie orcamento, pilotos e desenvolvimento.",
+             "icon": "team", "color": T.ACCENT_2, "cb": lambda: self._new("manager")},
+            {"rect": pygame.Rect(x0 + 2 * (w + gap), y0, w, h), "title": t("menu.load"),
+             "eyebrow": "SAVE", "desc": "Continue a temporada salva na garagem.",
+             "icon": "save", "color": T.GOLD, "cb": lambda: self.app.push(LoadScene(self.app))},
+            {"rect": pygame.Rect(x0 + 3 * (w + gap), y0, w, h), "title": "OPÇÕES",
+             "eyebrow": "SETUP", "desc": "Idioma, resolucao e tela cheia.",
+             "icon": "star", "color": T.PURPLE, "cb": lambda: self.app.push(OptionsScene(self.app))},
+        ]
         self.buttons = [
-            Button((cx - w // 2, y0,            w, h), t("menu.new_driver"),
-                   lambda: self._new("driver"), f.h2, icon="helmet"),
-            Button((cx - w // 2, y0 + (h+gap),  w, h), t("menu.new_manager"),
-                   lambda: self._new("manager"), f.h2, kind="ghost", icon="team"),
-            Button((cx - w // 2, y0 + 2*(h+gap),w, h), t("menu.load"),
-                   lambda: self.app.push(LoadScene(self.app)), f.h2, kind="ghost", icon="save"),
-            Button((cx - w // 2, y0 + 3*(h+gap),w, h), t("menu.quit"),
-                   self._quit, f.body, kind="ghost"),
+            Button((T.WIDTH - 178, 24, 130, 38), t("menu.quit"),
+                   self._quit, f.small, kind="ghost"),
         ]
         self._t = 0
         self._lang_rects = []
+        self._card_hover = -1
 
     def _new(self, mode):
         self.app.mode = mode
@@ -142,82 +208,77 @@ class MenuScene(Scene):
     def handle(self, event):
         for b in self.buttons:
             b.handle(event)
+        if event.type == pygame.MOUSEMOTION:
+            self._card_hover = -1
+            for i, card in enumerate(getattr(self, "menu_cards", [])):
+                if card["rect"].collidepoint(event.pos):
+                    self._card_hover = i
+                    break
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for idx, r in getattr(self, "res_rects", []):
-                if r.collidepoint(event.pos):
-                    self.app.set_resolution(idx)
-                    self.app.notify(f"Resolução: {T.RESOLUTIONS[idx][0]}")
-            for lang_code, r in getattr(self, "_lang_rects", []):
-                if r.collidepoint(event.pos):
-                    set_language(lang_code)
-                    self._rebuild()
+            for card in getattr(self, "menu_cards", []):
+                if card["rect"].collidepoint(event.pos) and card["cb"]:
+                    card["cb"]()
+                    return
 
     def update(self, dt):
         self._t += dt
 
     def draw(self, surf):
-        gradient_bg(surf)
+        premium_bg(surf, self._t)
         f = self.app.fonts
-        cx = T.WIDTH // 2
 
-        # Título principal com sombra e brilho
-        for off, col in [((4, 4), (0, 0, 0)), ((0, 0), T.ACCENT)]:
-            draw_text(surf, "MOTORSPORT", f.title,
-                      col, (cx + off[0], 140 + off[1]), center=True)
-        draw_text(surf, "D Y N A S T Y   M A N A G E R", f.h2, T.TEXT, (cx, 210), center=True)
+        # Barra superior no estilo hub.
+        pygame.draw.rect(surf, (8, 11, 20), (0, 0, T.WIDTH, 76))
+        pygame.draw.rect(surf, T.ACCENT, (0, 0, 5, 76))
+        pygame.draw.line(surf, T.LINE, (0, 76), (T.WIDTH, 76), 1)
+        draw_text(surf, "MOTORSPORT", f.h2, T.ACCENT, (24, 14))
+        draw_text(surf, "DYNASTY MANAGER", f.small, T.TEXT, (24, 42))
+        draw_text(surf, "GARAGEM", f.tiny, T.TEXT_DIM, (245, 30))
+        draw_text(surf, "CARREIRA", f.tiny, T.ACCENT, (330, 30))
+        draw_text(surf, "PADDOCK", f.tiny, T.TEXT_DIM, (430, 30))
 
-        # Linha decorativa com losango central
-        lw = 260
-        pygame.draw.rect(surf, T.ACCENT, (cx - lw - 16, 248, lw, 2))
-        pygame.draw.rect(surf, T.ACCENT, (cx + 16, 248, lw, 2))
-        # losango central
-        import math
-        diamond = [(cx, 244), (cx + 12, 249), (cx, 254), (cx - 12, 249)]
-        pygame.draw.polygon(surf, T.ACCENT, diamond)
+        draw_text(surf, "MOTORSPORT", f.title, (0, 0, 0), (64, 128))
+        draw_text(surf, "MOTORSPORT", f.title, T.ACCENT, (60, 124))
+        draw_text(surf, "DYNASTY MANAGER", f.h1, T.TEXT, (62, 186))
+        draw_text(surf, t("menu.tagline"), f.small, T.TEXT_DIM, (64, 232))
+        pygame.draw.rect(surf, T.ACCENT, (64, 270, 86, 3), border_radius=2)
+        pygame.draw.rect(surf, T.LINE, (158, 270, 240, 1))
 
-        draw_text(surf, t("menu.tagline"),
-                  f.small, T.TEXT_DIM, (cx, 272), center=True)
+        # Cards principais.
+        for i, card in enumerate(self.menu_cards):
+            r = card["rect"]
+            hover = i == self._card_hover
+            rr = r.move(0, -6 if hover else 0)
+            col = card["color"]
+            glass_panel(surf, rr, col, alpha=226 if hover else 205, radius=7)
+
+            hero = pygame.Rect(rr.x + 8, rr.y + 8, rr.w - 16, 104)
+            pygame.draw.rect(surf, T.lerp(col, (12, 14, 24), 0.56), hero, border_radius=5)
+            pygame.draw.polygon(surf, T.lerp(col, (255, 255, 255), 0.16),
+                                [(hero.x, hero.bottom - 18), (hero.right, hero.y + 30),
+                                 (hero.right, hero.bottom), (hero.x, hero.bottom)])
+            pygame.draw.rect(surf, (255, 255, 255), (hero.x, hero.y, hero.w, hero.h),
+                             width=1, border_radius=5)
+            for k in range(3):
+                x1 = hero.x + 22 + k * 76
+                pygame.draw.line(surf, T.lerp(col, T.BG_PANEL, 0.30),
+                                 (x1, hero.bottom - 18), (x1 + 58, hero.y + 22), 2)
+            pygame.draw.circle(surf, (10, 12, 20), hero.center, 32)
+            pygame.draw.circle(surf, col, hero.center, 32, 2)
+            draw_icon(surf, card["icon"], hero.centerx, hero.centery, 34, T.TEXT)
+
+            chip(surf, card["eyebrow"], (rr.x + 18, rr.y + 128), f.tiny, T.BG, col)
+            draw_text(surf, card["title"].upper(), f.body, T.TEXT, (rr.x + 18, rr.y + 160))
+            draw_wrapped_text(surf, card["desc"], f.tiny, T.TEXT_DIM,
+                              (rr.x + 18, rr.y + 190), rr.w - 36, max_lines=2)
+            pygame.draw.rect(surf, T.BG_INPUT, (rr.x + 18, rr.bottom - 14, rr.w - 36, 3), border_radius=2)
+            pygame.draw.rect(surf, col, (rr.x + 18, rr.bottom - 14, int((rr.w - 36) * (1.0 if hover else 0.82)), 3), border_radius=2)
 
         for b in self.buttons:
             b.draw(surf)
 
-        # seletor de idioma
-        draw_text(surf, t("menu.lang_label"), f.tiny, T.TEXT_FAINT,
-                  (cx, T.HEIGHT - 112), center=True)
-        lang_list = list(LANG_NAMES.items())
-        lang_labels = [v for _, v in lang_list]
-        lw_list = [f.tiny.size(l)[0] + 22 for l in lang_labels]
-        ltotal = sum(lw_list) + 10 * (len(lw_list) - 1)
-        lx = cx - ltotal // 2
-        self._lang_rects = []
-        cur_lang = current_language()
-        for (code, label), lw in zip(lang_list, lw_list):
-            lr = pygame.Rect(lx, T.HEIGHT - 94, lw, 26)
-            active = code == cur_lang
-            pygame.draw.rect(surf, T.ACCENT_2 if active else T.BG_PANEL, lr, border_radius=13)
-            pygame.draw.rect(surf, T.ACCENT_2 if active else T.LINE, lr, width=1, border_radius=13)
-            draw_text(surf, label, f.tiny, T.BG if active else T.TEXT_DIM, lr.center, center=True)
-            self._lang_rects.append((code, lr))
-            lx += lw + 10
-
-        # seletor de resolução
-        draw_text(surf, t("menu.resolution"), f.tiny, T.TEXT_FAINT,
-                  (cx, T.HEIGHT - 62), center=True)
-        labels = [r[0] for r in T.RESOLUTIONS]
-        widths = [f.tiny.size(l)[0] + 22 for l in labels]
-        total = sum(widths) + 10 * (len(labels) - 1)
-        x = cx - total // 2
-        self.res_rects = []
-        for i, (lab, w) in enumerate(zip(labels, widths)):
-            r = pygame.Rect(x, T.HEIGHT - 44, w, 28)
-            cur = i == self.app.res_index
-            pygame.draw.rect(surf, T.ACCENT if cur else T.BG_PANEL, r, border_radius=14)
-            pygame.draw.rect(surf, T.ACCENT if cur else T.LINE, r, width=1, border_radius=14)
-            draw_text(surf, lab, f.tiny, T.BG if cur else T.TEXT_DIM, r.center, center=True)
-            self.res_rects.append((i, r))
-            x += w + 10
         draw_text(surf, t("menu.version"), f.tiny, T.TEXT_FAINT,
-                  (T.WIDTH - 16, T.HEIGHT - 14), right=True)
+                  (T.WIDTH - 16, T.HEIGHT - 16), right=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -234,14 +295,15 @@ class CreateScene(Scene):
 
     def on_enter(self):
         f = self.app.fonts
-        self.name_in = TextInput((460, 200, 360, 46), f.body, "Seu nome")
+        self.name_in = TextInput((460, 200, 360, 46), f.body, t("create.name_ph"))
         self.age_in  = TextInput((460, 290, 120, 46), f.body,
-                                 "17" if self.mode == "driver" else "32", max_len=2, numeric=True)
-        self.nat_in  = TextInput((460, 380, 280, 46), f.body, "BRA")
+                                 t("create.age_ph_driver") if self.mode == "driver" else t("create.age_ph_manager"),
+                                 max_len=2, numeric=True)
+        self.nat_in  = TextInput((460, 380, 280, 46), f.body, t("create.nat_ph"))
         self.next_btn = Button((T.WIDTH - 240, T.HEIGHT - 80, 200, 52),
-                               "CONTINUAR", self._continue, f.h2)
+                               t("common.continue"), self._continue, f.h2)
         self.back_btn = Button((40, T.HEIGHT - 80, 160, 52),
-                               "VOLTAR", self._back, f.body, kind="ghost")
+                               t("common.back"), self._back, f.body, kind="ghost")
         # chips de série (retângulos calculados no draw)
         self.series_rects = []
         self.team_list = None
@@ -255,7 +317,7 @@ class CreateScene(Scene):
     def _continue(self):
         if self.step == 0:
             if not self.name_in.value():
-                self.app.notify("Digite um nome")
+                self.app.notify(t("create.no_name"))
                 return
             self._build_team_list()
             self.step = 1
@@ -272,7 +334,7 @@ class CreateScene(Scene):
         draw_text(surf, team.name, fonts.h2, T.TEXT, (row.x + 16, row.y + 10))
         draw_text(surf, team.short, fonts.tiny, T.TEXT_DIM, (row.x + 16, row.y + 44))
         perf = team.car_performance
-        draw_text(surf, f"Carro {perf:.0f}", fonts.small, T.ACCENT_2,
+        draw_text(surf, t("create.car_perf", perf=f"{perf:.0f}"), fonts.small, T.ACCENT_2,
                   (row.right - 18, row.y + 12), right=True)
         bud = f"€ {team.budget:,}".replace(",", ".")
         draw_text(surf, bud, fonts.tiny, T.GOLD, (row.right - 18, row.y + 42), right=True)
@@ -320,20 +382,19 @@ class CreateScene(Scene):
         pass
 
     def draw(self, surf):
-        gradient_bg(surf)
+        premium_bg(surf, self.app.anim_t)
         role = "PILOTO" if self.mode == "driver" else "GERENTE"
         header(surf, self.app, f"Nova carreira · {role}")
         f = self.app.fonts
         if self.step == 0:
-            draw_text(surf, "Quem é você?", f.h1, T.TEXT, (440, 130))
+            draw_text(surf, t("nav.profile"), f.h1, T.TEXT, (440, 130))
             draw_text(surf, "NOME", f.small, T.TEXT_DIM, (460, 175))
             self.name_in.draw(surf)
             draw_text(surf, "IDADE", f.small, T.TEXT_DIM, (460, 265))
             self.age_in.draw(surf)
-            draw_text(surf, "NACIONALIDADE (3 letras)", f.small, T.TEXT_DIM, (460, 355))
+            draw_text(surf, t("create.nat_ph"), f.small, T.TEXT_DIM, (460, 355))
             self.nat_in.draw(surf)
-            # escolha de categoria inicial
-            draw_text(surf, "ONDE COMEÇAR", f.small, T.TEXT_DIM, (460, 460))
+            draw_text(surf, "SÉRIE", f.small, T.TEXT_DIM, (460, 460))
             self.series_rects = []
             x = 460
             for sid in self.series_choices:
@@ -348,11 +409,8 @@ class CreateScene(Scene):
                           r.center, center=True)
                 self.series_rects.append((sid, r))
                 x += w + 14
-            if self.mode == "driver":
-                draw_text(surf, "Começar na Regional é mais arriscado — carros mais rápidos, rivais mais fortes.",
-                          f.tiny, T.TEXT_FAINT, (460, 552))
         else:
-            draw_text(surf, f"Escolha a equipe · {SERIES_LABEL[self.series_id]}",
+            draw_text(surf, t("create.choose_team", series=SERIES_LABEL[self.series_id]),
                       f.h1, T.TEXT, (430, 120))
             panel(surf, (420, 165, 830, 500), T.BG_PANEL)
             self.team_list.draw(surf, f)
@@ -374,23 +432,23 @@ class CareerScene(Scene):
         self.nav = []
         x = 28
         if self.mode == "driver":
-            items = [("Perfil",    "helmet",   lambda: self.app.push(PerfilScene(self.app))),
-                     ("Ranking",   "chart",    lambda: self.app.push(StandingsScene(self.app))),
-                     ("Sup.Lic.",  "star",     lambda: self.app.push(SuperLicenceScene(self.app))),
-                     ("Academia",  "cap",      lambda: self.app.push(AcademyScene(self.app))),
-                     ("Vagas",     "transfer", lambda: self.app.push(JobSearchScene(self.app))),
-                     ("Negociar",  "transfer", lambda: self.app.push(NegociarEquipeScene(self.app))),
-                     ("Moradia",   "home",     lambda: self.app.push(HousingScene(self.app))),
-                     ("Notícias",  "star",     lambda: self.app.push(NewsScene(self.app))),
-                     ("Aposentar", "door",     lambda: self.app.push(RetireScene(self.app)))]
+            items = [(t("nav.profile"),  "helmet",   lambda: self.app.push(PerfilScene(self.app))),
+                     (t("nav.ranking"),  "chart",    lambda: self.app.push(StandingsScene(self.app))),
+                     (t("nav.sl"),       "star",     lambda: self.app.push(SuperLicenceScene(self.app))),
+                     (t("nav.academy"),  "cap",      lambda: self.app.push(AcademyScene(self.app))),
+                     (t("nav.vacancies"),"transfer", lambda: self.app.push(JobSearchScene(self.app))),
+                     (t("nav.negotiate"),"transfer", lambda: self.app.push(NegociarEquipeScene(self.app))),
+                     (t("nav.housing"),  "home",     lambda: self.app.push(HousingScene(self.app))),
+                     (t("nav.news"),     "star",     lambda: self.app.push(NewsScene(self.app))),
+                     (t("nav.retire"),   "door",     lambda: self.app.push(RetireScene(self.app)))]
         else:
-            items = [("Perfil",          "helmet",   lambda: self.app.push(PerfilScene(self.app))),
-                     ("Desenvolvimento", "dev",      lambda: self.app.push(DevelopmentScene(self.app))),
-                     ("Transferências",  "transfer", lambda: self.app.push(TransferScene(self.app))),
-                     ("Equipe",          "team",     lambda: self.app.push(TeamInfoScene(self.app))),
-                     ("Classificação",   "chart",    lambda: self.app.push(StandingsScene(self.app))),
-                     ("Notícias",        "star",     lambda: self.app.push(NewsScene(self.app))),
-                     ("Virar Piloto",    "helmet",   lambda: self.app.push(BecomeDriverScene(self.app)))]
+            items = [(t("nav.profile"),       "helmet",   lambda: self.app.push(PerfilScene(self.app))),
+                     (t("nav.development"),   "dev",      lambda: self.app.push(DevelopmentScene(self.app))),
+                     (t("nav.transfers"),     "transfer", lambda: self.app.push(TransferScene(self.app))),
+                     (t("nav.team_info"),     "team",     lambda: self.app.push(TeamInfoScene(self.app))),
+                     (t("nav.ranking"),       "chart",    lambda: self.app.push(StandingsScene(self.app))),
+                     (t("nav.news"),          "star",     lambda: self.app.push(NewsScene(self.app))),
+                     (t("nav.become_driver"), "helmet",   lambda: self.app.push(BecomeDriverScene(self.app)))]
         pad = 52 if self.mode == "driver" else 64
         for label, icon, cb in items:
             w = sf.size(label)[0] + pad
@@ -398,12 +456,12 @@ class CareerScene(Scene):
             x += w + 8
         # ── linha primária (ações) ────────────────────────────────────────────
         by = T.HEIGHT - 70
-        self.run_btn  = Button((28, by, 250, 52), "CORRER PRÓXIMA", self._race, f.h2, icon="play")
-        self.end_btn  = Button((28, by, 320, 52), "ENCERRAR TEMPORADA", self._end_season, f.h2,
+        self.run_btn  = Button((28, by, 250, 52), t("career.run_next"), self._race, f.h2, icon="play")
+        self.end_btn  = Button((28, by, 320, 52), t("career.end_season"), self._end_season, f.h2,
                                color=T.GOLD)
-        self.save_btn = Button((T.WIDTH - 360, by, 160, 52), "SALVAR", self._save,
+        self.save_btn = Button((T.WIDTH - 360, by, 160, 52), t("common.save"), self._save,
                                f.body, kind="ghost", icon="save")
-        self.menu_btn = Button((T.WIDTH - 188, by, 160, 52), "MENU", self._menu,
+        self.menu_btn = Button((T.WIDTH - 188, by, 160, 52), t("common.menu"), self._menu,
                                f.body, kind="ghost", icon="menu")
 
     def _menu(self):
@@ -412,9 +470,9 @@ class CareerScene(Scene):
     def _save(self):
         try:
             save_load.save_game(self.app.profile, self.app.career, "save1")
-            self.app.notify("Jogo salvo em save1")
+            self.app.notify(t("save.ok"))
         except Exception as e:
-            self.app.notify(f"Erro ao salvar: {e}")
+            self.app.notify(t("save.error", error=e))
 
     def _race(self):
         car = self.app.career
@@ -445,10 +503,13 @@ class CareerScene(Scene):
         self.reveal = min(1.0, self.reveal + dt * 2.2)
 
     def draw(self, surf):
-        gradient_bg(surf)
+        premium_bg(surf, self.app.anim_t)
         car = self.app.career
         header(surf, self.app,
-                f"{SERIES_LABEL.get(car.current_series_id, '')} · Temporada {car.season_number} · {car.career_year}")
+                t("career.header",
+                  series=SERIES_LABEL.get(car.current_series_id, ""),
+                  season=car.season_number,
+                  year=car.career_year))
         if self.mode == "driver":
             self._draw_driver(surf)
         else:
@@ -469,33 +530,41 @@ class CareerScene(Scene):
         car = self.app.career
         d = car.player_driver
         if d is None:
-            draw_text(surf, "Erro: piloto do jogador não encontrado neste save.",
+            draw_text(surf, t("career.player_error"),
                       f.h2, T.RED, (440, 300))
             return
         col = T.SERIES_COLOR.get(car.current_series_id, T.ACCENT)
 
         # Card do piloto (esquerda)
-        accent_strip(surf, (28, 84, 380, 500), col)
-        draw_text(surf, d.name, f.h1, T.TEXT, (54, 100))
+        glass_panel(surf, (28, 84, 380, 500), col, alpha=220, radius=10)
+        pygame.draw.circle(surf, T.lerp(col, T.BG_PANEL, 0.55), (88, 142), 34)
+        pygame.draw.circle(surf, col, (88, 142), 34, 2)
+        draw_icon(surf, "helmet", 88, 142, 34, T.TEXT)
+        draw_text(surf, d.name, f.h1, T.TEXT, (132, 100))
         team_name = car.current_team.name if car.current_team else "Sem equipe"
-        draw_text(surf, team_name, f.body, T.TEXT_DIM, (54, 140))
-        chip(surf, SERIES_LABEL.get(car.current_series_id, ""), (54, 172), f.tiny, T.BG, col)
+        draw_text(surf, team_name, f.body, T.TEXT_DIM, (132, 140))
+        chip(surf, SERIES_LABEL.get(car.current_series_id, ""), (132, 172), f.tiny, T.BG, col)
 
         # Overall grande
-        draw_text(surf, "OVERALL", f.tiny, T.TEXT_DIM, (300, 110))
-        draw_text(surf, f"{d.overall:.0f}", f.big_num, col, (370, 96), right=True)
+        pygame.draw.rect(surf, T.BG_INPUT, (292, 112, 82, 78), border_radius=8)
+        pygame.draw.rect(surf, col, (292, 112, 82, 78), width=1, border_radius=8)
+        draw_text(surf, "OVR", f.tiny, T.TEXT_DIM, (333, 122), center=True)
+        draw_text(surf, f"{d.overall:.0f}", f.big_num, col, (333, 158), center=True)
 
         # Barras de atributos
         x, y, w = 54, 230, 320
         rv = self.reveal
-        for label, val in [("Velocidade", d.speed), ("Consistência", d.consistency),
-                           ("Ultrapassagem", d.overtaking), ("Pneus", d.tyre_mgmt),
-                           ("Defesa", d.defence), ("Chuva", d.rain)]:
+        for label, val in [(t("career.stat_speed"), d.speed),
+                           (t("career.stat_consistency"), d.consistency),
+                           (t("career.stat_overtaking"), d.overtaking),
+                           (t("career.stat_tyre"), d.tyre_mgmt),
+                           (t("career.stat_defence"), d.defence),
+                           (t("career.stat_rain"), d.rain)]:
             y = stat_bar(surf, x, y, w, label, val, color=col, fonts=f, anim=rv) + 14
 
         # Super Licença
         y += 6
-        draw_text(surf, "SUPER LICENÇA", f.tiny, T.TEXT_DIM, (x, y))
+        draw_text(surf, t("career.super_licence"), f.tiny, T.TEXT_DIM, (x, y))
         draw_text(surf, f"{d.super_licence_points}/40", f.small, T.GOLD, (x + w, y - 2), right=True)
         pygame.draw.rect(surf, T.BG_INPUT, (x, y + 18, w, 7), border_radius=4)
         frac = min(1.0, d.super_licence_points / 40) * rv
@@ -505,9 +574,9 @@ class CareerScene(Scene):
         # Saúde
         y += 38
         hcol = T.GREEN if d.health > 70 else (T.GOLD if d.health > 40 else T.RED)
-        draw_text(surf, "SAÚDE", f.tiny, T.TEXT_DIM, (x, y))
-        draw_text(surf, f"{d.health}%" + ("  LESIONADO" if d.is_injured else ""),
-                  f.small, hcol, (x + w, y - 2), right=True)
+        draw_text(surf, t("career.health"), f.tiny, T.TEXT_DIM, (x, y))
+        inj_suffix = "  " + t("career.injured") if d.is_injured else ""
+        draw_text(surf, f"{d.health}%{inj_suffix}", f.small, hcol, (x + w, y - 2), right=True)
         pygame.draw.rect(surf, T.BG_INPUT, (x, y + 18, w, 7), border_radius=4)
         if rv > 0.002:
             pygame.draw.rect(surf, hcol, (x, y + 18, max(4, int(w * d.health / 100 * rv)), 7),
@@ -518,12 +587,12 @@ class CareerScene(Scene):
         xp = d.experience
         next_thresh = ((xp // 120) + 1) * 120
         xp_frac = (xp % 120) / 120.0
-        draw_text(surf, "EXPERIÊNCIA", f.tiny, T.TEXT_DIM, (x, y))
+        draw_text(surf, t("career.experience"), f.tiny, T.TEXT_DIM, (x, y))
         draw_text(surf, f"{xp} XP", f.small, T.ACCENT_2, (x + w, y - 2), right=True)
         pygame.draw.rect(surf, T.BG_INPUT, (x, y + 18, w, 7), border_radius=4)
         if rv > 0.002 and xp_frac > 0:
             pygame.draw.rect(surf, T.ACCENT_2, (x, y + 18, max(4, int(w * xp_frac * rv)), 7), border_radius=4)
-        draw_text(surf, f"próximo nível: {next_thresh} XP", f.tiny, T.TEXT_FAINT, (x, y + 28))
+        draw_text(surf, t("career.next_level", xp=next_thresh), f.tiny, T.TEXT_FAINT, (x, y + 28))
 
         self._draw_next_round(surf, 430, 84)
         self._draw_standings(surf, 430, 250, car.driver_standings(),
@@ -533,47 +602,56 @@ class CareerScene(Scene):
     def _draw_manager(self, surf):
         f = self.app.fonts
         car = self.app.career
-        t = car.player_team
-        if t is None:
-            draw_text(surf, "Erro: equipe do jogador não encontrada neste save.",
+        tm = car.player_team
+        if tm is None:
+            draw_text(surf, t("career.team_error"),
                       f.h2, T.RED, (440, 300))
             return
         col = T.SERIES_COLOR.get(car.current_series_id, T.ACCENT)
 
-        accent_strip(surf, (28, 84, 380, 500), col)
-        draw_text(surf, t.name, f.h1, T.TEXT, (54, 100))
-        chip(surf, SERIES_LABEL.get(car.current_series_id, ""), (54, 150), f.tiny, T.BG, col)
-        bud = f"€ {t.budget:,}".replace(",", ".")
-        draw_text(surf, "ORÇAMENTO", f.tiny, T.TEXT_DIM, (54, 190))
-        draw_text(surf, bud, f.h2, T.GOLD, (54, 208))
+        glass_panel(surf, (28, 84, 380, 500), col, alpha=220, radius=10)
+        pygame.draw.circle(surf, T.lerp(col, T.BG_PANEL, 0.55), (88, 142), 34)
+        pygame.draw.circle(surf, col, (88, 142), 34, 2)
+        draw_icon(surf, "team", 88, 142, 34, T.TEXT)
+        draw_text(surf, tm.name, f.h1, T.TEXT, (132, 100))
+        chip(surf, SERIES_LABEL.get(car.current_series_id, ""), (132, 150), f.tiny, T.BG, col)
+        bud = f"€ {tm.budget:,}".replace(",", ".")
+        pygame.draw.rect(surf, T.BG_INPUT, (54, 188, 320, 58), border_radius=8)
+        pygame.draw.rect(surf, T.LINE, (54, 188, 320, 58), width=1, border_radius=8)
+        draw_text(surf, t("career.budget"), f.tiny, T.TEXT_DIM, (70, 198))
+        draw_text(surf, bud, f.h2, T.GOLD, (70, 216))
 
-        # Carro
+        # Car stats
         x, y, w = 54, 260, 320
-        for label, val in [("Chassi", t.chassis), ("Aerodinâmica", t.aerodynamics),
-                           ("Confiabilidade", t.reliability), ("Motor/Eng.", t.engineers)]:
+        for label, val in [(t("career.car_chassis"), tm.chassis),
+                           (t("career.car_aero"), tm.aerodynamics),
+                           (t("career.car_reliability"), tm.reliability),
+                           (t("career.car_engine"), tm.engineers)]:
             y = stat_bar(surf, x, y, w, label, val, color=col, fonts=f, anim=self.reveal) + 12
 
-        # Instalações
+        # Facilities
         y += 8
-        draw_text(surf, "INSTALAÇÕES", f.tiny, T.TEXT_DIM, (x, y))
+        draw_text(surf, t("career.facilities"), f.tiny, T.TEXT_DIM, (x, y))
         y += 22
-        facs = [("Fábrica", t.fac_factory), ("Simulador", t.fac_simulator),
-                ("P&D", t.fac_r_and_d), ("Pit", t.fac_pit_crew), ("Mkt", t.fac_marketing)]
+        facs = [(t("career.fac_factory"), tm.fac_factory),
+                (t("career.fac_sim"), tm.fac_simulator),
+                (t("career.fac_rd"), tm.fac_r_and_d),
+                (t("career.fac_pit"), tm.fac_pit_crew),
+                ("Mkt", tm.fac_marketing)]
         fx = x
         for name, lvl in facs:
             box = pygame.Rect(fx, y, 58, 44)
             pygame.draw.rect(surf, T.BG_PANEL_2, box, border_radius=6)
             draw_text(surf, name, f.tiny, T.TEXT_DIM, (box.centerx, box.y + 5), center=True)
-            # pips de nível (5 pontos, preenchidos = nível)
             px = box.centerx - 5 * 4 + 2
             for k in range(5):
                 c = T.GOLD if k < lvl else T.LINE
                 pygame.draw.circle(surf, c, (px + k * 9, box.y + 30), 3)
             fx += 64
 
-        # Pilotos contratados
+        # Contracted drivers
         y += 56
-        draw_text(surf, "PILOTOS", f.tiny, T.TEXT_DIM, (x, y))
+        draw_text(surf, t("career.drivers_list"), f.tiny, T.TEXT_DIM, (x, y))
         y += 22
         for d in car.player_drivers():
             draw_text(surf, f"{d.name}", f.small, T.TEXT, (x, y))
@@ -582,7 +660,7 @@ class CareerScene(Scene):
 
         self._draw_next_round(surf, 430, 84)
         self._draw_standings(surf, 430, 250, car.team_standings(),
-                             highlight=t.id, kind="team")
+                             highlight=tm.id, kind="team")
 
     # ── próxima corrida ───────────────────────────────────────────────────────
     def _draw_next_round(self, surf, x, y):
@@ -591,34 +669,35 @@ class CareerScene(Scene):
         rnd = car.current_round()
         total = len(car.season.rounds) if car.season else 0
         done = car.season.current_round if car.season else 0
-        panel(surf, (x, y, T.WIDTH - x - 28, 150), T.BG_PANEL)
+        col = T.SERIES_COLOR.get(car.current_series_id, T.ACCENT)
+        glass_panel(surf, (x, y, T.WIDTH - x - 28, 150), col, alpha=214, radius=10)
+        pygame.draw.polygon(surf, T.lerp(col, T.BG_PANEL, 0.78),
+                            [(T.WIDTH - 320, y), (T.WIDTH - 28, y),
+                             (T.WIDTH - 28, y + 150), (T.WIDTH - 430, y + 150)])
         if rnd:
-            draw_text(surf, "PRÓXIMA CORRIDA", f.tiny, T.ACCENT, (x + 20, y + 16))
+            draw_text(surf, t("career.next_race"), f.tiny, T.ACCENT, (x + 20, y + 16))
             name_rect = draw_text(surf, rnd.track_name, f.h1, T.TEXT, (x + 20, y + 36))
-            # bandeira do país ao lado do nome da pista
             draw_country_flag(surf, name_rect.right + 18, name_rect.centery - 11, rnd.country)
-            draw_text(surf, f"{rnd.country}  ·  {rnd.laps} voltas  ·  {rnd.track_type}",
+            draw_text(surf, f"{rnd.country}  ·  " + t("career.laps", n=rnd.laps) + f"  ·  {rnd.track_type}",
                       f.small, T.TEXT_DIM, (x + 20, y + 84))
         else:
-            draw_text(surf, "TEMPORADA ENCERRADA", f.tiny, T.GOLD, (x + 20, y + 16))
-            draw_text(surf, "Todas as corridas concluídas", f.h2, T.TEXT, (x + 20, y + 40))
-            draw_text(surf, "Clique em ENCERRAR TEMPORADA para o balanço final",
-                      f.small, T.TEXT_DIM, (x + 20, y + 84))
-        # progresso de rodadas
-        draw_text(surf, f"Rodada {min(done+1, total)}/{total}", f.small, T.TEXT,
+            draw_text(surf, t("career.season_complete"), f.tiny, T.GOLD, (x + 20, y + 16))
+            draw_text(surf, t("career.all_races_done"), f.h2, T.TEXT, (x + 20, y + 40))
+            draw_text(surf, t("career.click_end"), f.small, T.TEXT_DIM, (x + 20, y + 84))
+        draw_text(surf, t("career.round", done=min(done+1, total), total=total), f.small, T.TEXT,
                   (T.WIDTH - 44, y + 16), right=True)
         bx, bw = x + 20, T.WIDTH - x - 28 - 40
         pygame.draw.rect(surf, T.BG_INPUT, (bx, y + 122, bw, 8), border_radius=4)
         if total:
-            pygame.draw.rect(surf, T.ACCENT, (bx, y + 122, int(bw * done / total), 8),
+            pygame.draw.rect(surf, col, (bx, y + 122, int(bw * done / total), 8),
                              border_radius=4)
 
     # ── tabela de classificação ───────────────────────────────────────────────
     def _draw_standings(self, surf, x, y, standings, highlight, kind):
         f = self.app.fonts
         w = T.WIDTH - x - 28
-        panel(surf, (x, y, w, 334), T.BG_PANEL)
-        title = "CLASSIFICAÇÃO — PILOTOS" if kind == "driver" else "CLASSIFICAÇÃO — EQUIPES"
+        glass_panel(surf, (x, y, w, 334), T.ACCENT, alpha=214, radius=10)
+        title = t("career.standings_drivers") if kind == "driver" else t("career.standings_teams")
         draw_text(surf, title, f.tiny, T.ACCENT, (x + 20, y + 14))
         ry = y + 44
         for pos, obj, pts in standings[:8]:
@@ -661,7 +740,7 @@ class QualifyingScene(Scene):
                     (self.my_team and self._is_my_team(r))), 0)
         self.scroll = max(0, min(self.max_scroll, idx - self.visible // 2))
         self.go_btn = Button((T.WIDTH // 2 - 150, T.HEIGHT - 64, 300, 50),
-                             "IR PARA A CORRIDA", self._to_race, f.h2, icon="play")
+                             t("qualifying.go_race"), self._to_race, f.h2, icon="play")
 
     def _is_my_team(self, row):
         car = self.app.career
@@ -691,19 +770,19 @@ class QualifyingScene(Scene):
         f = self.app.fonts
         x, y, w, h = _RT_X, _RT_Y, _RT_W, _RT_H
         fmt = self.quali["format"] if self.quali else "single"
-        title = "CLASSIFICAÇÃO — Q1 / Q2 / Q3" if fmt == "q1q2q3" else "CLASSIFICAÇÃO"
+        title = t("qualifying.title_full") if fmt == "q1q2q3" else t("qualifying.title")
         draw_text(surf, title, f.h1, T.ACCENT, (x, 44))
         if self.is_wet:
-            chip(surf, "PISTA MOLHADA", (x + 520, 48), f.small, T.BG, T.ACCENT_2)
+            chip(surf, t("qualifying.wet"), (x + 520, 48), f.small, T.BG, T.ACCENT_2)
 
         panel(surf, (x, y, w, h), T.BG_PANEL)
         cP, cN, cT, cTime, cGap, cSeg = x+22, x+66, x+330, x+560, x+690, x+w-24
-        draw_text(surf, "POS", f.tiny, T.TEXT_DIM, (cP, y+16))
-        draw_text(surf, "PILOTO", f.tiny, T.TEXT_DIM, (cN, y+16))
-        draw_text(surf, "EQUIPE", f.tiny, T.TEXT_DIM, (cT, y+16))
-        draw_text(surf, "TEMPO", f.tiny, T.TEXT_DIM, (cTime, y+16))
-        draw_text(surf, "GAP", f.tiny, T.TEXT_DIM, (cGap, y+16))
-        draw_text(surf, "FASE", f.tiny, T.TEXT_DIM, (cSeg, y+16), right=True)
+        draw_text(surf, t("common.pos"), f.tiny, T.TEXT_DIM, (cP, y+16))
+        draw_text(surf, t("common.driver_col"), f.tiny, T.TEXT_DIM, (cN, y+16))
+        draw_text(surf, t("common.team_col"), f.tiny, T.TEXT_DIM, (cT, y+16))
+        draw_text(surf, t("common.time_col"), f.tiny, T.TEXT_DIM, (cTime, y+16))
+        draw_text(surf, t("common.gap_col"), f.tiny, T.TEXT_DIM, (cGap, y+16))
+        draw_text(surf, t("common.phase_col"), f.tiny, T.TEXT_DIM, (cSeg, y+16), right=True)
         pygame.draw.line(surf, T.LINE, (x+14, y+_RT_HEAD-4), (x+w-14, y+_RT_HEAD-4), 1)
 
         rows = self.quali["rows"] if self.quali else []
@@ -718,7 +797,7 @@ class QualifyingScene(Scene):
                 pygame.draw.rect(surf, T.ACCENT, row, width=2, border_radius=6)
             pcol = T.GOLD if r["pos"] == 1 else (T.TEXT if is_me else T.TEXT_DIM)
             pole = (r["pos"] == 1)
-            draw_text(surf, "POLE" if pole else f"{r['pos']}", f.small,
+            draw_text(surf, t("qualifying.pole") if pole else f"{r['pos']}", f.small,
                       T.GOLD if pole else pcol, (cP, ry))
             draw_text(surf, r["name"], f.small, T.TEXT if is_me else T.TEXT, (cN, ry))
             draw_text(surf, r["team_name"], f.tiny, T.TEXT_FAINT, (cT, ry+2))
@@ -741,18 +820,18 @@ class QualifyingScene(Scene):
         # painel lateral: sua largada
         ex, ew = x + w + 20, T.WIDTH - (x + w + 20) - 40
         panel(surf, (ex, y, ew, h), T.BG_PANEL)
-        draw_text(surf, "SUA LARGADA", f.tiny, T.ACCENT, (ex+18, y+16))
+        draw_text(surf, t("qualifying.my_start"), f.tiny, T.ACCENT, (ex+18, y+16))
         my = next((r for r in rows if (r["driver_id"] == self.my_id) or
                    (self.my_team and self._is_my_team(r))), None)
         if my:
             draw_text(surf, f"P{my['pos']}", f.big_num,
                       T.GOLD if my['pos'] == 1 else T.TEXT, (ex+18, y+44))
-            draw_text(surf, "na grade de largada", f.small, T.TEXT_DIM, (ex+18, y+108))
+            draw_text(surf, t("qualifying.on_grid"), f.small, T.TEXT_DIM, (ex+18, y+108))
             if fmt == "q1q2q3":
-                draw_text(surf, f"Eliminado em: {my.get('segment','Q3')}", f.small,
+                draw_text(surf, t("qualifying.eliminated", seg=my.get('segment','Q3')), f.small,
                           SEG_COLOR.get(my.get('segment'), T.TEXT_DIM), (ex+18, y+140))
         if fmt == "q1q2q3":
-            draw_text(surf, "Q1 18min · Q2 15min · Q3 12min", f.tiny, T.TEXT_FAINT,
+            draw_text(surf, t("qualifying.q_format"), f.tiny, T.TEXT_FAINT,
                       (ex+18, y+h-30))
         self.go_btn.draw(surf)
 
@@ -798,22 +877,24 @@ class _SimBase(Scene):
         pygame.draw.rect(surf, T.ACCENT, (bx, by, int(bw * prog), 12), border_radius=6)
         draw_icon(surf, "play", bx + int(bw * prog), by + 6, 18, T.GOLD)
         dots = "." * (int(self.t * 4) % 4)
-        draw_text(surf, "Preparando corrida" + dots, f.small, T.TEXT_DIM, (cx, cy + 100), center=True)
+        draw_text(surf, t("simulating.preparing") + dots, f.small, T.TEXT_DIM, (cx, cy + 100), center=True)
 
 
 class SimulatingScene(_SimBase):
-    _label = "SIMULANDO CORRIDA"
+    @property
+    def _label(self): return t("simulating.race")
 
     def update(self, dt):
         self.t += dt
         if self.t >= self.DURATION and not self.done:
             self.done = True
             res, ev = self.app.career.simulate_next_race()
-            self.app.replace(RaceResultScene(self.app, res, ev, race_label="CORRIDA"))
+            self.app.replace(RaceResultScene(self.app, res, ev, race_label=t("simulating.race")))
 
 
 class SprintSimulatingScene(_SimBase):
-    _label = "SPRINT RACE"
+    @property
+    def _label(self): return t("simulating.sprint")
 
     def update(self, dt):
         self.t += dt
@@ -821,12 +902,13 @@ class SprintSimulatingScene(_SimBase):
             self.done = True
             res, ev = self.app.career.simulate_sprint_race()
             self.app.replace(RaceResultScene(self.app, res, ev,
-                                             race_label="SPRINT RACE",
+                                             race_label=t("simulating.sprint"),
                                              next_scene_factory=lambda a: FeatureSimulatingScene(a)))
 
 
 class FeatureSimulatingScene(_SimBase):
-    _label = "FEATURE RACE"
+    @property
+    def _label(self): return t("simulating.feature")
 
     def update(self, dt):
         self.t += dt
@@ -869,7 +951,7 @@ class RaceResultScene(Scene):
     def on_enter(self):
         f = self.app.fonts
         # Label do botão depende se há feature race a seguir
-        btn_label = "IR PARA FEATURE RACE ▶" if self.next_scene_factory else "CONTINUAR"
+        btn_label = t("result.to_feature") if self.next_scene_factory else t("result.continue")
         self.ok_btn = Button((T.WIDTH // 2 - 160, T.HEIGHT - 64, 320, 50),
                              btn_label, self._continue, f.h2, icon="play")
         car = self.app.career
@@ -930,27 +1012,26 @@ class RaceResultScene(Scene):
         gradient_bg(surf)
         f = self.app.fonts
         x, y, w, h = _RT_X, _RT_Y, _RT_W, _RT_H
-        draw_text(surf, f"RESULTADO — {self.race_label}", f.h1, T.ACCENT, (x, 44))
-        draw_text(surf, "role para ver toda a grade", f.tiny, T.TEXT_FAINT, (x + 460, 58))
+        draw_text(surf, t("result.title", label=self.race_label), f.h1, T.ACCENT, (x, 44))
+        draw_text(surf, t("result.scroll_hint"), f.tiny, T.TEXT_FAINT, (x + 460, 58))
 
         panel(surf, (x, y, w, h), T.BG_PANEL)
-        # cabeçalho de colunas — mais dados
         cP   = x + 22
         cN   = x + 66
         cT   = x + 310
-        cG   = x + 490   # gap ao líder
-        cGA  = x + 590   # gap ao de frente
-        cBL  = x + 690   # melhor volta
+        cG   = x + 490
+        cGA  = x + 590
+        cBL  = x + 690
         cPt  = x + w - 52
         cCPt = x + w - 16
-        draw_text(surf, "POS",    f.tiny, T.TEXT_DIM, (cP,   y+16))
-        draw_text(surf, "PILOTO", f.tiny, T.TEXT_DIM, (cN,   y+16))
-        draw_text(surf, "EQUIPE", f.tiny, T.TEXT_DIM, (cT,   y+16))
-        draw_text(surf, "GAP",    f.tiny, T.TEXT_DIM, (cG,   y+16))
-        draw_text(surf, "+FRENTE",f.tiny, T.TEXT_DIM, (cGA,  y+16))
-        draw_text(surf, "M.VOLTA",f.tiny, T.TEXT_DIM, (cBL,  y+16))
-        draw_text(surf, "PTS", f.tiny, T.TEXT_DIM, (cPt, y+16), right=True)
-        draw_text(surf, "CAMP",f.tiny, T.TEXT_DIM, (cCPt, y+16), right=True)
+        draw_text(surf, t("common.pos"),        f.tiny, T.TEXT_DIM, (cP,   y+16))
+        draw_text(surf, t("common.driver_col"), f.tiny, T.TEXT_DIM, (cN,   y+16))
+        draw_text(surf, t("common.team_col"),   f.tiny, T.TEXT_DIM, (cT,   y+16))
+        draw_text(surf, t("common.gap_col"),    f.tiny, T.TEXT_DIM, (cG,   y+16))
+        draw_text(surf, t("common.ahead_col"),  f.tiny, T.TEXT_DIM, (cGA,  y+16))
+        draw_text(surf, t("common.bestlap_col"),f.tiny, T.TEXT_DIM, (cBL,  y+16))
+        draw_text(surf, t("common.pts_col"),    f.tiny, T.TEXT_DIM, (cPt, y+16), right=True)
+        draw_text(surf, t("common.champ_col"),  f.tiny, T.TEXT_DIM, (cCPt, y+16), right=True)
         pygame.draw.line(surf, T.LINE, (x+14, y+_RT_HEAD-4), (x+w-14, y+_RT_HEAD-4), 1)
 
         prev = surf.get_clip()
@@ -1005,7 +1086,7 @@ class RaceResultScene(Scene):
         # painel lateral: eventos + melhor volta pessoal + posição no camp.
         ex, ew = x + w + 20, T.WIDTH - (x + w + 20) - 40
         panel(surf, (ex, y, ew, h), T.BG_PANEL)
-        draw_text(surf, "O QUE ACONTECEU", f.tiny, T.ACCENT, (ex+18, y+16))
+        draw_text(surf, t("result.what_happened"), f.tiny, T.ACCENT, (ex+18, y+16))
 
         # resultado pessoal no topo do painel
         my_res = next((r for r in self.results
@@ -1034,7 +1115,7 @@ class RaceResultScene(Scene):
         ev_list = [e for e in self.events if getattr(e, "event_type", "") in EVENT_PT]
         ev_list.sort(key=lambda e: getattr(e, "lap", 0))
         if not ev_list:
-            draw_text(surf, "Corrida limpa.", f.small, T.TEXT_DIM, (ex+18, ey))
+            draw_text(surf, t("result.clean_race"), f.small, T.TEXT_DIM, (ex+18, ey))
         for e in ev_list[:10]:
             label, col = EVENT_PT.get(e.event_type, (e.event_type, T.TEXT_DIM))
             lap = getattr(e, "lap", 0)
@@ -1067,20 +1148,20 @@ class SeasonEndScene(Scene):
         self.champion_must_promote = self.s.get("champion_must_promote", False)
         car = self.app.career
         if self.champion_must_promote:
-            label = "SUBIR (OBRIGATÓRIO — CAMPEÃO) ▶"
+            label = t("season_end.btn_champion_promote")
             color = T.GOLD
         elif self.promoted:
-            label = "SUBIR DE CATEGORIA ▶"
+            label = t("season_end.btn_promote")
             color = T.GOLD
         elif getattr(car, "_free_agent_next_season", False):
-            label = "ESCOLHER NOVA EQUIPE ▶"
+            label = t("season_end.btn_choose_team")
             color = T.ACCENT_2
         else:
-            label = "PRÓXIMA TEMPORADA ▶"
+            label = t("season_end.btn_next")
             color = T.ACCENT
         self.go_btn = Button((T.WIDTH // 2 - 200, T.HEIGHT - 90, 400, 54),
                              label, self._next, f.h2, color=color)
-        self.menu_btn = Button((40, T.HEIGHT - 90, 160, 52), "MENU",
+        self.menu_btn = Button((40, T.HEIGHT - 90, 160, 52), t("common.menu"),
                                lambda: self.app.reset_to(MenuScene(self.app)),
                                f.body, kind="ghost")
 
@@ -1113,7 +1194,7 @@ class SeasonEndScene(Scene):
         f = self.app.fonts
         s = self.s
         cx = T.WIDTH // 2
-        draw_text(surf, "FIM DE TEMPORADA", f.h1, T.ACCENT, (cx, 50), center=True)
+        draw_text(surf, t("season_end.title"), f.h1, T.ACCENT, (cx, 50), center=True)
 
         panel(surf, (cx - 380, 110, 760, 460), T.BG_PANEL)
         x = cx - 340
@@ -1122,10 +1203,10 @@ class SeasonEndScene(Scene):
         is_driver = self.app.profile.mode == "driver"
         pos = s.get("player_position") if is_driver else s.get("team_position")
         pcol = T.GOLD if pos == 1 else T.TEXT
-        draw_text(surf, "SUA POSIÇÃO FINAL", f.small, T.TEXT_DIM, (x, y))
+        draw_text(surf, t("season_end.final_pos"), f.small, T.TEXT_DIM, (x, y))
         draw_text(surf, f"P{pos}", f.big_num, pcol, (x, y + 22))
 
-        draw_text(surf, "CAMPEÃO", f.small, T.TEXT_DIM, (cx + 60, y))
+        draw_text(surf, t("season_end.champion"), f.small, T.TEXT_DIM, (cx + 60, y))
         draw_text(surf, s.get("champion_driver", "?"), f.h2, T.TEXT, (cx + 60, y + 26))
         draw_text(surf, s.get("champion_team", ""), f.small, T.TEXT_DIM, (cx + 60, y + 60))
 
@@ -1135,60 +1216,65 @@ class SeasonEndScene(Scene):
 
         rows = []
         if is_driver:
-            rows.append(("Pontos de Super Licença ganhos", f"+{s.get('sl_earned', 0)}"))
-            rows.append(("Total Super Licença", f"{s.get('sl_total', 0)}/40"))
-            rows.append(("Prêmio em dinheiro", f"€ {s.get('prize_money', 0):,}".replace(",", ".")))
-            rows.append(("Dinheiro pessoal", f"€ {s.get('personal_money', 0):,}".replace(",", ".")))
+            rows.append((t("season_end.sl_earned"), f"+{s.get('sl_earned', 0)}"))
+            rows.append((t("season_end.sl_total"), f"{s.get('sl_total', 0)}/40"))
+            rows.append((t("season_end.prize_money"), f"€ {s.get('prize_money', 0):,}".replace(",", ".")))
+            rows.append((t("season_end.personal_money"), f"€ {s.get('personal_money', 0):,}".replace(",", ".")))
             if s.get("sl_blocked"):
-                rows.append(("Promoção bloqueada", s.get("sl_block_reason", "")))
+                rows.append((t("season_end.sl_blocked"), s.get("sl_block_reason", "")))
         else:
-            rows.append(("Renda de patrocinadores", f"€ {s.get('sponsor_income', 0):,}".replace(",", ".")))
-            rows.append(("Prêmio em dinheiro", f"€ {s.get('prize_money', 0):,}".replace(",", ".")))
-            rows.append(("Dividendo pessoal", f"€ {s.get('dividend', 0):,}".replace(",", ".")))
-            rows.append(("Orçamento final", f"€ {s.get('final_budget', 0):,}".replace(",", ".")))
+            rows.append((t("season_end.sponsor_income"), f"€ {s.get('sponsor_income', 0):,}".replace(",", ".")))
+            rows.append((t("season_end.prize_money"), f"€ {s.get('prize_money', 0):,}".replace(",", ".")))
+            rows.append((t("season_end.dividend"), f"€ {s.get('dividend', 0):,}".replace(",", ".")))
+            rows.append((t("season_end.final_budget"), f"€ {s.get('final_budget', 0):,}".replace(",", ".")))
         for label, val in rows:
             draw_text(surf, label, f.body, T.TEXT_DIM, (x, y))
             draw_text(surf, val, f.body, T.TEXT, (x + 680, y), right=True)
             y += 36
 
-        # Evolução de habilidades (modo piloto)
         deltas = s.get("skill_deltas") or {}
         if is_driver and deltas:
             y += 6
-            draw_text(surf, "EVOLUÇÃO", f.tiny, T.ACCENT, (x, y)); y += 26
-            labels = {"speed": "Velocidade", "consistency": "Consistência",
-                      "tyre_mgmt": "Pneus", "overtaking": "Ultrapassagem",
-                      "defence": "Defesa", "rain": "Chuva", "feedback": "Feedback técnico"}
+            draw_text(surf, t("season_end.evolution"), f.tiny, T.ACCENT, (x, y)); y += 26
+            skill_names = {
+                "speed": t("profile.stat_speed"),
+                "consistency": t("profile.stat_consistency"),
+                "tyre_mgmt": t("profile.stat_tyre"),
+                "overtaking": t("profile.stat_overtaking"),
+                "defence": t("profile.stat_defence"),
+                "rain": t("profile.stat_rain"),
+                "feedback": t("profile.stat_feedback"),
+            }
             dx = x
             for attr, dv in deltas.items():
                 if dv == 0:
                     continue
-                txt = f"{labels.get(attr, attr)} {'+' if dv > 0 else ''}{dv}"
+                txt = f"{skill_names.get(attr, attr)} {'+' if dv > 0 else ''}{dv}"
                 col = T.GREEN if dv > 0 else T.RED
                 rect = chip(surf, txt, (dx, y), f.small, T.BG, col)
                 dx += rect.width + 8
                 if dx > x + 560:
                     dx = x; y += 34
             if not any(deltas.values()):
-                draw_text(surf, "Sem mudanças neste ano", f.small, T.TEXT_FAINT, (x, y))
+                draw_text(surf, t("season_end.no_evolution"), f.small, T.TEXT_FAINT, (x, y))
 
         if self.champion_must_promote:
-            draw_text(surf, f"CAMPEÃO — OBRIGADO A SUBIR PARA {SERIES_LABEL.get(s.get('promotes_to',''), '')}",
+            draw_text(surf, t("season_end.champion_must_promote",
+                              series=SERIES_LABEL.get(s.get('promotes_to',''), '')),
                       f.h2, T.GOLD, (cx, 544), center=True)
-            draw_text(surf, "Regra: campeão de F2/F3 não pode permanecer na mesma categoria.",
-                      f.tiny, T.TEXT_DIM, (cx, 572), center=True)
+            draw_text(surf, t("season_end.champion_rule"), f.tiny, T.TEXT_DIM, (cx, 572), center=True)
         elif self.promoted:
-            draw_text(surf, f"PROMOVIDO PARA {SERIES_LABEL.get(s.get('promotes_to',''), '')}",
+            draw_text(surf, t("season_end.promoted_to",
+                              series=SERIES_LABEL.get(s.get('promotes_to',''), '')),
                       f.h2, T.GREEN, (cx, 548), center=True)
         elif not s.get("sl_blocked"):
-            draw_text(surf, "Continua na mesma categoria", f.small, T.TEXT_DIM,
+            draw_text(surf, t("season_end.same_category"), f.small, T.TEXT_DIM,
                       (cx, 550), center=True)
 
-        # Banner de agente livre
         car = self.app.career
         if getattr(car, "_free_agent_next_season", False):
             panel(surf, (cx - 380, 578, 760, 36), T.BG_PANEL_2, border=T.GOLD, border_w=1)
-            draw_text(surf, "AGENTE LIVRE — Escolha uma nova equipe antes de continuar",
+            draw_text(surf, t("season_end.free_agent_banner"),
                       f.small, T.GOLD, (cx, 596), center=True)
 
         self.go_btn.draw(surf)
@@ -1205,12 +1291,12 @@ class LoadScene(Scene):
         self.list = SelectList((cx_center(), 180, 700, 380), self.saves, f.body,
                                row_h=70, render_row=self._row)
         self.load_btn = Button((T.WIDTH // 2 - 230, T.HEIGHT - 90, 220, 52),
-                               "CARREGAR  ▶", self._load, f.h2)
+                               t("load.btn"), self._load, f.h2)
         self.back_btn = Button((T.WIDTH // 2 + 20, T.HEIGHT - 90, 200, 52),
-                               "VOLTAR", self.app.pop, f.body, kind="ghost")
+                               t("common.back"), self.app.pop, f.body, kind="ghost")
 
     def _row(self, surf, sv, row, sel, fonts):
-        mode = "Piloto" if sv.get("mode") == "driver" else "Gerente"
+        mode = t("load.mode_driver") if sv.get("mode") == "driver" else t("load.mode_manager")
         draw_text(surf, f"{sv.get('name','?')}  ·  {mode}", fonts.h2, T.TEXT, (row.x + 16, row.y + 8))
         sub = f"{SERIES_LABEL.get(sv.get('series',''), sv.get('series',''))} · {sv.get('year','?')} · slot {sv.get('slot','')}"
         draw_text(surf, sub, fonts.small, T.TEXT_DIM, (row.x + 16, row.y + 40))
@@ -1225,7 +1311,7 @@ class LoadScene(Scene):
             self.app.career = career
             self.app.reset_to(CareerScene(self.app))
         else:
-            self.app.notify("Falha ao carregar")
+            self.app.notify(t("load.fail"))
 
     def handle(self, event):
         if self.saves:
@@ -1238,16 +1324,90 @@ class LoadScene(Scene):
 
     def draw(self, surf):
         gradient_bg(surf)
-        header(surf, self.app, "Carregar jogo")
+        header(surf, self.app, t("load.header"))
         f = self.app.fonts
-        draw_text(surf, "Saves disponíveis", f.h1, T.TEXT, (cx_center(), 120))
+        draw_text(surf, t("load.title"), f.h1, T.TEXT, (cx_center(), 120))
         if not self.saves:
-            draw_text(surf, "Nenhum save encontrado.", f.body, T.TEXT_DIM,
+            draw_text(surf, t("load.no_saves"), f.body, T.TEXT_DIM,
                       (T.WIDTH // 2, 300), center=True)
         else:
             panel(surf, (cx_center() - 10, 170, 720, 400), T.BG_PANEL)
             self.list.draw(surf, f)
             self.load_btn.draw(surf)
+        self.back_btn.draw(surf)
+
+
+class OptionsScene(Scene):
+    def on_enter(self):
+        f = self.app.fonts
+        self.back_btn = Button((40, T.HEIGHT - 76, 180, 52), t("common.back"),
+                               self.app.pop, f.body, kind="ghost", icon="menu")
+        self._lang_rects = []
+        self.res_rects = []
+
+    def handle(self, event):
+        self.back_btn.handle(event)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for lang_code, r in getattr(self, "_lang_rects", []):
+                if r.collidepoint(event.pos):
+                    set_language(lang_code)
+                    self.app.notify(LANG_NAMES.get(lang_code, lang_code))
+                    return
+            for idx, r in getattr(self, "res_rects", []):
+                if r.collidepoint(event.pos):
+                    self.app.set_resolution(idx)
+                    self.app.notify(f"Resolução: {T.RESOLUTIONS[idx][0]}")
+                    return
+
+    def update(self, dt):
+        pass
+
+    def _option_chip(self, surf, rect, label, active, active_col):
+        f = self.app.fonts
+        bg = active_col if active else T.BG_PANEL_2
+        edge = active_col if active else T.LINE
+        fg = T.BG if active else T.TEXT_DIM
+        pygame.draw.rect(surf, bg, rect, border_radius=8)
+        pygame.draw.rect(surf, edge, rect, width=1, border_radius=8)
+        draw_text(surf, label, f.small, fg, rect.center, center=True)
+
+    def draw(self, surf):
+        premium_bg(surf, self.app.anim_t)
+        header(surf, self.app, "Opções")
+        f = self.app.fonts
+        cx = T.WIDTH // 2
+
+        glass_panel(surf, (270, 120, 740, 430), T.PURPLE, alpha=224, radius=10)
+        draw_text(surf, "OPÇÕES", f.h1, T.TEXT, (cx, 150), center=True)
+        draw_text(surf, "Ajuste o jogo antes de voltar para a garagem.",
+                  f.small, T.TEXT_DIM, (cx, 194), center=True)
+
+        draw_text(surf, t("menu.lang_label").upper(), f.tiny, T.ACCENT_2, (330, 260))
+        lang_list = list(LANG_NAMES.items())
+        self._lang_rects = []
+        x = 330
+        cur_lang = current_language()
+        for code, label in lang_list:
+            w = max(110, f.small.size(label)[0] + 34)
+            r = pygame.Rect(x, 286, w, 42)
+            self._option_chip(surf, r, label, code == cur_lang, T.ACCENT_2)
+            self._lang_rects.append((code, r))
+            x += w + 12
+
+        draw_text(surf, t("menu.resolution").upper(), f.tiny, T.ACCENT, (330, 370))
+        labels = [r[0] for r in T.RESOLUTIONS]
+        self.res_rects = []
+        x, y = 330, 396
+        for i, lab in enumerate(labels):
+            w = max(118, f.small.size(lab)[0] + 34)
+            if x + w > 950:
+                x = 330
+                y += 54
+            r = pygame.Rect(x, y, w, 42)
+            self._option_chip(surf, r, lab, i == self.app.res_index, T.ACCENT)
+            self.res_rects.append((i, r))
+            x += w + 12
+
         self.back_btn.draw(surf)
 
 
@@ -1428,7 +1588,7 @@ class SubScene(Scene):
     subtitle = ""
 
     def on_enter(self):
-        self.back_btn = Button((40, T.HEIGHT - 70, 180, 52), "VOLTAR",
+        self.back_btn = Button((40, T.HEIGHT - 70, 180, 52), t("common.back"),
                                self._close, self.app.fonts.body, kind="ghost", icon="menu")
         self.setup()
 
@@ -1447,9 +1607,9 @@ class SubScene(Scene):
 
     def draw(self, surf):
         gradient_bg(surf)
-        header(surf, self.app, self.title)
+        header(surf, self.app, t(self.title, self.title))
         if self.subtitle:
-            draw_text(surf, self.subtitle, self.app.fonts.small, T.TEXT_DIM, (40, 84))
+            draw_text(surf, t(self.subtitle, self.subtitle), self.app.fonts.small, T.TEXT_DIM, (40, 84))
         self.body(surf)
         self.back_btn.draw(surf)
 
@@ -1458,8 +1618,8 @@ class SubScene(Scene):
 # CLASSIFICAÇÃO COMPLETA
 # ══════════════════════════════════════════════════════════════════════════════
 class StandingsScene(SubScene):
-    title = "Classificação"
-    subtitle = "role com o mouse para ver toda a grade"
+    title = "standings.scene_title"
+    subtitle = "standings.subtitle"
     ROW = 34
     TOP = 154
     PANEL_Y, PANEL_H = 110, 540
@@ -1524,19 +1684,19 @@ class StandingsScene(SubScene):
             team = next((t for t in car.all_teams if d.id in t.drivers), None)
             return team.short if team else "—"
 
-        self._draw_col(surf, f, car.driver_standings(), 40, 600, "PILOTOS",
+        self._draw_col(surf, f, car.driver_standings(), 40, 600, t("standings.drivers"),
                        self.scroll_d, driver_mine, lambda d: d.name, driver_short)
-        self._draw_col(surf, f, car.team_standings(), 660, T.WIDTH - 660 - 40, "EQUIPES",
-                       self.scroll_t, lambda t: (t.id == my_tid) or t.is_player_team,
-                       lambda t: t.name, None)
+        self._draw_col(surf, f, car.team_standings(), 660, T.WIDTH - 660 - 40, t("standings.teams"),
+                       self.scroll_t, lambda tm: (tm.id == my_tid) or tm.is_player_team,
+                       lambda tm: tm.name, None)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SUPER LICENÇA
 # ══════════════════════════════════════════════════════════════════════════════
 class SuperLicenceScene(SubScene):
-    title = "Super Licença FIA"
-    subtitle = "Requisito F1: 40 pontos + idade 18+"
+    title = "sl_scene.title"
+    subtitle = "sl_scene.subtitle"
 
     def body(self, surf):
         f = self.app.fonts
@@ -1572,7 +1732,7 @@ class SuperLicenceScene(SubScene):
 # ACADEMIA
 # ══════════════════════════════════════════════════════════════════════════════
 class AcademyScene(SubScene):
-    title = "Academias de Pilotos"
+    title = "academy.title"
 
     def setup(self):
         self.ac_list = list(acad.load_academies().values())
@@ -1597,7 +1757,7 @@ class AcademyScene(SubScene):
     def _join(self):
         pd = self.app.career.player_driver
         if pd.academy_id:
-            self.app.notify("Saia da atual primeiro"); return
+            self.app.notify(t("academy.leave_first")); return
         a = self.list.current()
         ok, msg = acad.join_academy(pd, a.id, {"budget": self.app.profile.personal_money})
         self.app.notify(msg)
@@ -1605,7 +1765,7 @@ class AcademyScene(SubScene):
     def _leave(self):
         pd = self.app.career.player_driver
         if not pd.academy_id:
-            self.app.notify("Não está em academia"); return
+            self.app.notify(t("academy.not_in")); return
         fee = acad.buyout_fee(pd.academy_id)
         ok, msg = acad.leave_academy(pd, fee <= self.app.profile.personal_money,
                                      {"budget": self.app.profile.personal_money})
@@ -1631,46 +1791,48 @@ class AcademyScene(SubScene):
 # DESENVOLVIMENTO / INSTALAÇÕES (melhoria de carro)
 # ══════════════════════════════════════════════════════════════════════════════
 class DevelopmentScene(SubScene):
-    title = "Desenvolvimento & Instalações"
+    title = "development.title"
 
-    FAC = [("Fábrica", "fac_factory", "factory"),
-           ("Simulador", "fac_simulator", "simulator"),
-           ("P&D", "fac_r_and_d", "r_and_d"),
-           ("Pit Crew", "fac_pit_crew", "pit_crew"),
-           ("Marketing", "fac_marketing", "marketing")]
-    CAR = [("Chassi", "chassis", 150_000, 3),
-           ("Aerodinâmica", "aerodynamics", 180_000, 3),
-           ("Confiabilidade", "reliability", 120_000, 4),
-           ("Pit Crew (carro)", "pit_crew", 80_000, 3),
-           ("Engenheiros", "engineers", 100_000, 2),
-           ("Fábrica (carro)", "factory", 200_000, 3)]
+    FAC = [("development.fac_factory", "fac_factory", "factory"),
+           ("development.fac_simulator", "fac_simulator", "simulator"),
+           ("development.fac_rd", "fac_r_and_d", "r_and_d"),
+           ("development.fac_pit", "fac_pit_crew", "pit_crew"),
+           ("development.fac_marketing", "fac_marketing", "marketing")]
+    CAR = [("development.car_chassis", "chassis", 150_000, 3),
+           ("development.car_aero", "aerodynamics", 180_000, 3),
+           ("development.car_reliability", "reliability", 120_000, 4),
+           ("development.car_pit", "pit_crew", 80_000, 3),
+           ("development.car_engineers", "engineers", 100_000, 2),
+           ("development.car_factory", "factory", 200_000, 3)]
 
     def setup(self):
         self.fac_btns = []
         self.car_btns = []
 
-    def _upgrade_fac(self, attr, key, lbl):
-        t = self.app.career.player_team
-        lvl = getattr(t, attr, 1)
-        cost = t.facilities.upgrade_cost(key)
+    def _upgrade_fac(self, attr, key, lbl_key):
+        tm = self.app.career.player_team
+        lvl = getattr(tm, attr, 1)
+        cost = tm.facilities.upgrade_cost(key)
+        name = t(lbl_key, lbl_key)
         if lvl >= 5:
-            self.app.notify(f"{lbl} já no máximo")
-        elif t.budget < cost:
-            self.app.notify("Sem orçamento")
+            self.app.notify(t("development.maxed", name=name))
+        elif tm.budget < cost:
+            self.app.notify(t("development.no_budget"))
         else:
-            setattr(t, attr, lvl + 1); t.budget -= cost
-            self.app.notify(f"{lbl}: nível {lvl}→{lvl+1}")
+            setattr(tm, attr, lvl + 1); tm.budget -= cost
+            self.app.notify(t("development.upgraded_fac", name=name, old=lvl, new=lvl+1))
 
-    def _upgrade_car(self, attr, cost, gain, lbl):
-        t = self.app.career.player_team
-        cur = getattr(t, attr)
+    def _upgrade_car(self, attr, cost, gain, lbl_key):
+        tm = self.app.career.player_team
+        cur = getattr(tm, attr)
+        name = t(lbl_key, lbl_key)
         if cur >= 99:
-            self.app.notify(f"{lbl} no máximo")
-        elif t.budget < cost:
-            self.app.notify("Sem orçamento")
+            self.app.notify(t("development.maxed", name=name))
+        elif tm.budget < cost:
+            self.app.notify(t("development.no_budget"))
         else:
-            setattr(t, attr, min(99, cur + gain)); t.budget -= cost
-            self.app.notify(f"{lbl}: {cur}→{getattr(t, attr)}")
+            setattr(tm, attr, min(99, cur + gain)); tm.budget -= cost
+            self.app.notify(t("development.upgraded_car", name=name, old=cur, new=getattr(tm, attr)))
 
     def body_handle(self, event):
         for b in self.fac_btns + self.car_btns:
@@ -1678,51 +1840,50 @@ class DevelopmentScene(SubScene):
 
     def body(self, surf):
         f = self.app.fonts
-        t = self.app.career.player_team
-        draw_text(surf, f"Orçamento: € {t.budget:,}".replace(",", "."),
+        tm = self.app.career.player_team
+        draw_text(surf, t("development.budget", amount=f"{tm.budget:,}".replace(",", ".")),
                   f.h2, T.GOLD, (40, 78))
         self.fac_btns = []
         self.car_btns = []
-        # Instalações (coluna esquerda)
         panel(surf, (40, 120, 580, 250), T.BG_PANEL)
-        draw_text(surf, "INSTALAÇÕES", f.tiny, T.ACCENT, (60, 132))
+        draw_text(surf, t("development.facilities"), f.tiny, T.ACCENT, (60, 132))
         y = 162
-        for lbl, attr, key in self.FAC:
-            lvl = getattr(t, attr, 1)
-            cost = t.facilities.upgrade_cost(key)
-            draw_text(surf, lbl, f.body, T.TEXT, (60, y))
-            # pips
+        for lbl_key, attr, key in self.FAC:
+            lvl = getattr(tm, attr, 1)
+            cost = tm.facilities.upgrade_cost(key)
+            draw_text(surf, t(lbl_key, lbl_key), f.body, T.TEXT, (60, y))
             for k in range(5):
                 c = T.GOLD if k < lvl else T.LINE
                 pygame.draw.circle(surf, c, (250 + k * 14, y + 12), 5)
             maxed = lvl >= 5
-            label = "MÁX" if maxed else f"€ {cost:,}".replace(",", ".")
+            label = t("development.max") if maxed else f"€ {cost:,}".replace(",", ".")
             b = Button((400, y - 4, 200, 34), label,
-                       (lambda a=attr, k=key, l=lbl: self._upgrade_fac(a, k, l)),
-                       f.small, kind="ghost" if (maxed or t.budget < cost) else "primary")
+                       (lambda a=attr, k=key, l=lbl_key: self._upgrade_fac(a, k, l)),
+                       f.small, kind="ghost" if (maxed or tm.budget < cost) else "primary")
             b.enabled = not maxed
             self.fac_btns.append(b); b.draw(surf)
             y += 42
-        # Carro (coluna direita)
         panel(surf, (640, 120, T.WIDTH - 640 - 40, 430), T.BG_PANEL)
-        draw_text(surf, "CARRO", f.tiny, T.ACCENT, (660, 132))
+        draw_text(surf, t("development.car"), f.tiny, T.ACCENT, (660, 132))
         y = 162
-        for lbl, attr, cost, gain in self.CAR:
-            cur = getattr(t, attr)
-            draw_text(surf, lbl, f.body, T.TEXT, (660, y))
+        for lbl_key, attr, cost, gain in self.CAR:
+            cur = getattr(tm, attr)
+            draw_text(surf, t(lbl_key, lbl_key), f.body, T.TEXT, (660, y))
             draw_text(surf, f"{cur}/100", f.small, T.ACCENT_2, (860, y))
-            can = t.budget >= cost and cur < 99
+            can = tm.budget >= cost and cur < 99
             b = Button((T.WIDTH - 40 - 230, y - 4, 230, 34),
                        f"+{gain}   € {cost:,}".replace(",", "."),
-                       (lambda a=attr, c=cost, g=gain, l=lbl: self._upgrade_car(a, c, g, l)),
+                       (lambda a=attr, c=cost, g=gain, l=lbl_key: self._upgrade_car(a, c, g, l)),
                        f.small, kind="primary" if can else "ghost")
             b.enabled = can
             self.car_btns.append(b); b.draw(surf)
             y += 44
-        fac = t.facilities
+        fac = tm.facilities
         draw_text(surf,
-                  f"Dev x{fac.dev_speed_multiplier():.2f}   Pit -{fac.pit_time_bonus():.1f}s   "
-                  f"Patroc. x{fac.sponsor_multiplier():.2f}",
+                  t("development.dev_stats",
+                    dev=f"{fac.dev_speed_multiplier():.2f}",
+                    pit=f"{fac.pit_time_bonus():.1f}",
+                    spon=f"{fac.sponsor_multiplier():.2f}"),
                   f.small, T.TEXT_DIM, (60, 392))
 
 
@@ -1730,7 +1891,7 @@ class DevelopmentScene(SubScene):
 # TRANSFERÊNCIAS
 # ══════════════════════════════════════════════════════════════════════════════
 class TransferScene(SubScene):
-    title = "Janela de Transferências"
+    title = "transfers.title"
 
     def setup(self):
         self.market = TransferMarket(self.app.career)
@@ -1767,14 +1928,14 @@ class TransferScene(SubScene):
             car.player_team.drivers.remove(d.id)
         self._refresh_free()
         self.free_list.items = self.free
-        self.app.notify(f"{d.name} liberado")
+        self.app.notify(t("transfers.released", name=d.name))
 
     def _sign(self):
         car = self.app.career
         if len(car.player_team.drivers) >= 2:
-            self.app.notify("Libere um piloto primeiro"); return
+            self.app.notify(t("transfers.release_first")); return
         if not self.free:
-            self.app.notify("Sem agentes livres"); return
+            self.app.notify(t("transfers.no_free")); return
         d = self.free_list.current()
         mv = driver_market_value(d, 0)
         ok, msg = self.market.sign_driver(d.id, int(mv * 0.9), 2)
@@ -1791,25 +1952,26 @@ class TransferScene(SubScene):
         f = self.app.fonts
         car = self.app.career
         pt = car.player_team
-        draw_text(surf, f"Orçamento: € {pt.budget:,}".replace(",", "."), f.h2, T.GOLD, (40, 78))
+        draw_text(surf, t("transfers.budget", amount=f"{pt.budget:,}".replace(",", ".")),
+                  f.h2, T.GOLD, (40, 78))
         panel(surf, (40, 120, 600, 470), T.BG_PANEL)
-        draw_text(surf, "SEUS PILOTOS", f.tiny, T.ACCENT, (60, 132))
+        draw_text(surf, t("transfers.my_drivers"), f.tiny, T.ACCENT, (60, 132))
         self.my_btns = []
         y = 164
         for d in car.player_drivers():
             mv = driver_market_value(d, car.standings_drivers.get(d.id, 0))
             draw_text(surf, d.name, f.h2, T.TEXT, (60, y))
-            contr = f"{d.contract_years} ano(s)" if d.contract_years > 0 else "EXPIRADO"
-            draw_text(surf, f"OVR {d.overall:.0f}  ·  Valor € {mv:,}".replace(",", ".") + f"  ·  {contr}",
-                      f.tiny, T.TEXT_DIM, (60, y + 32))
-            rb = Button((360, y, 120, 38), "Renovar", (lambda x=d: self._renew(x)),
+            contr = t("transfers.contract", n=d.contract_years) if d.contract_years > 0 else t("transfers.expired")
+            ovr_val = t("transfers.value", ovr=f"{d.overall:.0f}", val=f"{mv:,}".replace(",", "."))
+            draw_text(surf, f"{ovr_val}  ·  {contr}", f.tiny, T.TEXT_DIM, (60, y + 32))
+            rb = Button((360, y, 120, 38), t("transfers.renew"), (lambda x=d: self._renew(x)),
                         f.small, kind="ghost")
-            lb = Button((490, y, 120, 38), "Liberar", (lambda x=d: self._release(x)),
+            lb = Button((490, y, 120, 38), t("transfers.release"), (lambda x=d: self._release(x)),
                         f.small, kind="danger")
             self.my_btns += [rb, lb]; rb.draw(surf); lb.draw(surf)
             y += 80
         panel(surf, (660, 120, T.WIDTH - 660 - 40, 500), T.BG_PANEL)
-        draw_text(surf, "AGENTES LIVRES", f.tiny, T.ACCENT, (680, 132))
+        draw_text(surf, t("transfers.free_agents"), f.tiny, T.ACCENT, (680, 132))
         self.free_list.draw(surf, f)
         self.sign_btn.draw(surf)
 
@@ -1818,7 +1980,7 @@ class TransferScene(SubScene):
 # PERFIL DO JOGADOR
 # ══════════════════════════════════════════════════════════════════════════════
 class PerfilScene(SubScene):
-    title = "Perfil"
+    title = "profile.title"
     ROW = 32
 
     def setup(self):
@@ -1917,7 +2079,7 @@ class PerfilScene(SubScene):
             draw_text(surf, tag, f.small, pcol, (rx + rw - 24, ry), right=True)
             ry += self.ROW
         if not hist:
-            draw_text(surf, "Ainda sem temporadas concluídas.", f.small, T.TEXT_DIM, (rx + 18, ry))
+            draw_text(surf, t("profile.no_history"), f.small, T.TEXT_DIM, (rx + 18, ry))
         surf.set_clip(prev)
 
 
@@ -1925,42 +2087,41 @@ class PerfilScene(SubScene):
 # EQUIPE E PILOTOS (info)
 # ══════════════════════════════════════════════════════════════════════════════
 class TeamInfoScene(SubScene):
-    title = "Equipe & Pilotos"
+    title = "team_info.title"
 
     def body(self, surf):
         f = self.app.fonts
-        t = self.app.career.player_team
+        tm = self.app.career.player_team
         panel(surf, (40, 110, 560, 510), T.BG_PANEL)
         x = 64
-        draw_text(surf, t.name, f.h1, T.TEXT, (x, 126))
-        rows = [("Orçamento", f"€ {t.budget:,}".replace(",", ".")),
-                ("Custo/corrida", f"€ {t.base_cost_per_race:,}".replace(",", ".")),
-                ("Reputação", f"{t.reputation}/100"),
-                ("Performance", f"{t.car_performance:.1f}/100")]
+        draw_text(surf, tm.name, f.h1, T.TEXT, (x, 126))
+        rows = [(t("team_info.budget"), f"€ {tm.budget:,}".replace(",", ".")),
+                (t("team_info.cost_race"), f"€ {tm.base_cost_per_race:,}".replace(",", ".")),
+                (t("team_info.reputation"), f"{tm.reputation}/100"),
+                (t("team_info.performance"), f"{tm.car_performance:.1f}/100")]
         y = 180
         for lab, val in rows:
             draw_text(surf, lab, f.body, T.TEXT_DIM, (x, y))
             draw_text(surf, val, f.body, T.TEXT, (x + 510, y), right=True)
             y += 38
-        draw_text(surf, "PATROCINADORES", f.tiny, T.ACCENT, (x, y + 10))
+        draw_text(surf, t("team_info.sponsors"), f.tiny, T.ACCENT, (x, y + 10))
         y += 40
-        for s in t.sponsors:
-            name = s["name"] if isinstance(s, dict) else s.name
-            val  = s["value"] if isinstance(s, dict) else s.value
+        for sp in tm.sponsors:
+            name = sp["name"] if isinstance(sp, dict) else sp.name
+            val  = sp["value"] if isinstance(sp, dict) else sp.value
             draw_text(surf, name, f.small, T.TEXT, (x, y))
             draw_text(surf, f"€ {val:,}".replace(",", "."), f.small, T.GOLD, (x + 510, y), right=True)
             y += 30
-        # pilotos
         panel(surf, (620, 110, T.WIDTH - 620 - 40, 510), T.BG_PANEL)
-        draw_text(surf, "PILOTOS", f.tiny, T.ACCENT, (644, 126))
+        draw_text(surf, t("team_info.drivers"), f.tiny, T.ACCENT, (644, 126))
         y = 162
         for d in self.app.career.player_drivers():
             draw_text(surf, d.name, f.h2, T.TEXT, (644, y))
             tags = f"OVR {d.overall:.0f}  ·  Pot {d.potential}  ·  SL {d.super_licence_points}/40"
             draw_text(surf, tags, f.small, T.TEXT_DIM, (644, y + 30))
-            extra = f"Saúde {d.health}%  ·  € {d.salary:,}".replace(",", ".") + f"  ·  {d.contract_years}a"
+            extra = f"{t('career.health')} {d.health}%  ·  € {d.salary:,}".replace(",", ".") + f"  ·  {d.contract_years}a"
             if d.is_injured:
-                extra += f"  ·  LESIONADO {d.injury_races_remaining}c"
+                extra += f"  ·  {t('career.injured')} {d.injury_races_remaining}"
             if d.academy_id:
                 extra += f"  ·  {d.academy_id.split('_')[0].title()}"
             draw_text(surf, extra, f.tiny, T.TEXT_FAINT, (644, y + 56))
@@ -1971,14 +2132,14 @@ class TeamInfoScene(SubScene):
 # APOSENTAR → GERENTE
 # ══════════════════════════════════════════════════════════════════════════════
 class RetireScene(SubScene):
-    title = "Aposentar e virar Chefe de Equipe"
+    title = "retire.title"
 
     def setup(self):
         self.series = list(MANAGER_ENTRY_COST.keys())
         self.sel = 0
         self.rects = []
         self.confirm_btn = Button((T.WIDTH - 320, T.HEIGHT - 70, 280, 52),
-                                  "CONFIRMAR APOSENTADORIA", self._confirm, self.app.fonts.body,
+                                  t("retire.confirm"), self._confirm, self.app.fonts.body,
                                   color=T.GOLD)
 
     def _confirm(self):
@@ -2005,10 +2166,9 @@ class RetireScene(SubScene):
     def body(self, surf):
         f = self.app.fonts
         p = self.app.profile
-        draw_text(surf, f"Dinheiro pessoal: € {p.personal_money:,}".replace(",", "."),
+        draw_text(surf, t("retire.money", amount=f"{p.personal_money:,}".replace(",", ".")),
                   f.h2, T.GOLD, (40, 110))
-        draw_text(surf, "Escolha a categoria onde entrar como chefe (custo de entrada):",
-                  f.body, T.TEXT_DIM, (40, 160))
+        draw_text(surf, t("retire.choose"), f.body, T.TEXT_DIM, (40, 160))
         self.rects = []
         y = 210
         for i, sid in enumerate(self.series):
@@ -2030,8 +2190,8 @@ class RetireScene(SubScene):
 # VIRAR PILOTO (gerente → piloto)
 # ══════════════════════════════════════════════════════════════════════════════
 class BecomeDriverScene(SubScene):
-    title = "Virar Piloto"
-    subtitle = "Quase impossível para um gerente experiente"
+    title = "become_driver.title"
+    subtitle = "become_driver.subtitle"
 
     def setup(self):
         p = self.app.profile
@@ -2040,7 +2200,7 @@ class BecomeDriverScene(SubScene):
         self.sel = 0
         self.rects = []
         self.confirm_btn = Button((T.WIDTH - 300, T.HEIGHT - 70, 260, 52),
-                                  "TENTAR MESMO ASSIM", self._confirm, self.app.fonts.body,
+                                  t("become_driver.try"), self._confirm, self.app.fonts.body,
                                   color=T.RED, text_color=T.TEXT)
         self.confirm_btn.enabled = bool(self.possible)
 
@@ -2267,7 +2427,7 @@ _NEWS_CAT_LABEL = {
 
 
 class NewsScene(SubScene):
-    title = "Notícias"
+    title = "news.title"
     ROW_H = 72
     PANEL_Y = 110
     PANEL_H = 540
@@ -2292,7 +2452,7 @@ class NewsScene(SubScene):
         x, y, w, h = 28, self.PANEL_Y, T.WIDTH - 56, self.PANEL_H
         panel(surf, (x, y, w, h), T.BG_PANEL)
         if not self.items:
-            draw_text(surf, "Nenhuma notícia ainda.", f.body, T.TEXT_DIM,
+            draw_text(surf, t("news.no_news"), f.body, T.TEXT_DIM,
                       (T.WIDTH // 2, y + 80), center=True)
             return
         prev = surf.get_clip()
@@ -2333,7 +2493,7 @@ _STATUS_COLORS = {
 }
 
 class HousingScene(SubScene):
-    title = "Moradia"
+    title = "housing.title"
 
     def setup(self):
         self.selected = None   # key being hovered
@@ -2374,8 +2534,7 @@ class HousingScene(SubScene):
         races = len(car.season.rounds) if car.season else 16
 
         # Título + salário bruto
-        draw_text(surf, "Escolha onde você mora — impacta finanças, XP e reputação.",
-                  f.small, T.TEXT_DIM, (56, 115))
+        draw_text(surf, t("housing.subtitle"), f.small, T.TEXT_DIM, (56, 115))
 
         card_w, card_h = 340, 210
         cols = 3
@@ -2453,7 +2612,7 @@ class HousingScene(SubScene):
 # BUSCA DE VAGAS
 # ══════════════════════════════════════════════════════════════════════════════
 class JobSearchScene(SubScene):
-    title = "Busca de Vagas"
+    title = "job_search.title"
 
     ROW_H = 54
 
@@ -2511,8 +2670,7 @@ class JobSearchScene(SubScene):
         penalty_base = car.breaking_contract_penalty() if hasattr(car, "breaking_contract_penalty") else 0
 
         # Cabeçalho
-        draw_text(surf, "Verde = boa chance · Laranja = arriscar · Vermelho = indisponível",
-                  f.tiny, T.TEXT_DIM, (56, 108))
+        draw_text(surf, t("job_search.hint"), f.tiny, T.TEXT_DIM, (56, 108))
         if penalty_base > 0:
             draw_text(surf,
                 f"⚠ Multa por quebra de contrato: €{penalty_base:,.0f} (debitado ao aceitar)",
@@ -2584,7 +2742,7 @@ class JobSearchScene(SubScene):
 # NEGOCIAR COM EQUIPE ATUAL
 # ══════════════════════════════════════════════════════════════════════════════
 class NegociarEquipeScene(SubScene):
-    title = "Negociar com Equipe Atual"
+    title = "negotiate.title"
 
     def setup(self):
         f = self.app.fonts
@@ -2599,13 +2757,13 @@ class NegociarEquipeScene(SubScene):
 
         cx = T.WIDTH // 2
         self.now_btn = Button(
-            (cx - 360, 490, 320, 56), "GARANTIR TROCA (paga multa)",
+            (cx - 360, 490, 320, 56), t("negotiate.btn_now"),
             self._transfer_now, f.body,
             color=T.RED, text_color=T.TEXT)
         self.now_btn.enabled = self.can_afford and not car.season_complete()
 
         self.end_btn = Button(
-            (cx + 40, 490, 320, 56), "TROCAR NO FIM DA TEMPORADA",
+            (cx + 40, 490, 320, 56), t("negotiate.btn_end"),
             self._transfer_end, f.body, kind="ghost")
         self.end_btn.enabled = not self.free_agent_set
 
@@ -2614,7 +2772,7 @@ class NegociarEquipeScene(SubScene):
         p = self.app.profile
         if self.penalty > 0:
             p.personal_money -= self.penalty
-            self.app.notify(f"Multa paga: € {self.penalty:,.0f}")
+            self.app.notify(t("negotiate.penalty_paid", amount=f"{self.penalty:,.0f}"))
         # Player is free to search — pending offer will be applied at season end
         self.app.replace(JobSearchScene(self.app))
 
@@ -2622,7 +2780,7 @@ class NegociarEquipeScene(SubScene):
         car = self.app.career
         car._free_agent_next_season = True
         self.free_agent_set = True
-        self.app.notify("Ao fim da temporada você vira agente livre — sem multa.")
+        self.app.notify(t("negotiate.notify_end"))
         f = self.app.fonts
         self._rebuild_buttons(f, car)
         self.app.pop()
@@ -2640,14 +2798,14 @@ class NegociarEquipeScene(SubScene):
 
         # Painel: contrato atual
         panel(surf, (cx - 400, 90, 800, 170), T.BG_PANEL)
-        draw_text(surf, "CONTRATO ATUAL", f.tiny, T.ACCENT, (cx - 380, 102))
+        draw_text(surf, t("negotiate.current_contract"), f.tiny, T.ACCENT, (cx - 380, 102))
         team_name = car.current_team.name if car.current_team else "—"
         series    = SERIES_LABEL.get(car.current_series_id, "")
         col_data = [
-            ("Equipe",        team_name,                                    T.TEXT),
-            ("Categoria",     series,                                       T.TEXT),
-            ("Salário/ano",   f"€ {pd.salary:,}".replace(",", ".") if pd else "—", T.GOLD),
-            ("Restante",      f"{pd.contract_years} ano(s)" if pd else "—", T.TEXT_DIM),
+            (t("negotiate.col_team"),     team_name,                                         T.TEXT),
+            (t("negotiate.col_category"), series,                                            T.TEXT),
+            (t("negotiate.col_salary"),   f"€ {pd.salary:,}".replace(",", ".") if pd else "—", T.GOLD),
+            (t("negotiate.col_remaining"), f"{pd.contract_years} " + t("common.years", n="") if pd else "—", T.TEXT_DIM),
         ]
         bx = cx - 380
         for i, (lbl, val, vcol) in enumerate(col_data):
@@ -2656,26 +2814,27 @@ class NegociarEquipeScene(SubScene):
             draw_text(surf, lbl, f.tiny, T.TEXT_DIM, (ox, oy))
             draw_text(surf, val, f.body, vcol, (ox, oy + 18))
 
-        # Painel: multa
         pen_col = T.GREEN if self.can_afford else T.RED
         panel(surf, (cx - 400, 272, 800, 90), T.BG_PANEL_2)
-        draw_text(surf, "MULTA DE RESCISÃO CONTRATUAL", f.tiny, T.TEXT_DIM, (cx - 380, 284))
+        draw_text(surf, t("negotiate.penalty_title"), f.tiny, T.TEXT_DIM, (cx - 380, 284))
         if self.penalty > 0:
             draw_text(surf, f"€ {self.penalty:,}".replace(",", "."), f.h2, pen_col, (cx - 380, 302))
             saldo = p.personal_money - self.penalty
-            status = f"Saldo após multa: € {saldo:,}".replace(",", ".") if self.can_afford else "Saldo insuficiente!"
+            if self.can_afford:
+                status = t("negotiate.balance_after", amount=f"{saldo:,}".replace(",", "."))
+            else:
+                status = t("negotiate.no_balance")
             draw_text(surf, status, f.small, pen_col, (cx + 80, 310))
         else:
-            draw_text(surf, "Nenhuma multa — contrato expirado ou primeiro ano.", f.body, T.TEXT_DIM, (cx - 380, 302))
+            draw_text(surf, t("negotiate.no_penalty"), f.body, T.TEXT_DIM, (cx - 380, 302))
 
-        # Explicação das duas opções
+        cost_str = t("negotiate.opt_a_cost", amount=f"{self.penalty:,}".replace(",", ".")) if self.can_afford else \
+                   t("negotiate.opt_a_no_balance", amount=f"{self.penalty:,}".replace(",", "."))
         for ox, title, desc1, desc2 in [
-            (cx - 400, "OPÇÃO A — GARANTIR AGORA",
-             "Paga a multa imediatamente e busca nova equipe.",
-             f"Custo: € {self.penalty:,}".replace(",", ".") + (" (sem saldo!)" if not self.can_afford else "")),
-            (cx + 40,  "OPÇÃO B — TROCAR NO FIM",
-             "Cumpre o resto da temporada sem multa.",
-             "Ao fim vira agente livre e escolhe nova equipe."),
+            (cx - 400, t("negotiate.opt_a_title"),
+             t("negotiate.opt_a_desc1"), cost_str),
+            (cx + 40,  t("negotiate.opt_b_title"),
+             t("negotiate.opt_b_desc1"), t("negotiate.opt_b_desc2")),
         ]:
             panel(surf, (ox, 374, 360, 106), T.BG_PANEL)
             draw_text(surf, title, f.tiny, T.ACCENT, (ox + 16, 386))
@@ -2683,8 +2842,7 @@ class NegociarEquipeScene(SubScene):
             draw_text(surf, desc2, f.tiny, T.TEXT_FAINT, (ox + 16, 428))
 
         if self.free_agent_set:
-            msg = "Agente livre ao fim da temporada: ativado. Procure equipe em Vagas."
-            draw_text(surf, msg, f.body, T.GOLD, (cx, 460), center=True)
+            draw_text(surf, t("negotiate.free_active"), f.body, T.GOLD, (cx, 460), center=True)
 
         self.now_btn.draw(surf)
         self.end_btn.draw(surf)
@@ -2701,7 +2859,7 @@ class CLTScene(Scene):
     def on_enter(self):
         f = self.app.fonts
         self.btn = Button((T.WIDTH // 2 - 120, T.HEIGHT - 90, 240, 52),
-                          "VOLTAR AO MENU", lambda: self.app.reset_to(MenuScene(self.app)),
+                          t("clt.back"), lambda: self.app.reset_to(MenuScene(self.app)),
                           f.h2, kind="ghost")
 
     def handle(self, event):
@@ -2713,14 +2871,13 @@ class CLTScene(Scene):
         surf.fill((20, 8, 10))
         f = self.app.fonts
         cx = T.WIDTH // 2
-        draw_text(surf, "SITUAÇÃO CRÍTICA", f.title, T.RED, (cx, 160), center=True)
-        draw_text(surf, "Você está fora do automobilismo.", f.h2, T.TEXT, (cx, 240), center=True)
-        msg = CLT_MESSAGES.get(self.series_id, "Virou CLT do automobilismo.")
+        draw_text(surf, t("clt.title"), f.title, T.RED, (cx, 160), center=True)
+        draw_text(surf, t("clt.out"), f.h2, T.TEXT, (cx, 240), center=True)
+        msg_key = CLT_MSG_KEYS.get(self.series_id, "clt.formula_4")
         panel(surf, (cx - 400, 300, 800, 120), T.BG_PANEL, border=T.RED, border_w=2)
-        draw_text(surf, msg, f.body, T.GOLD, (cx, 360), center=True)
-        # histórico
+        draw_text(surf, t(msg_key), f.body, T.GOLD, (cx, 360), center=True)
         y = 460
-        draw_text(surf, "HISTÓRICO", f.tiny, T.TEXT_DIM, (cx, y), center=True)
+        draw_text(surf, t("clt.history"), f.tiny, T.TEXT_DIM, (cx, y), center=True)
         y += 26
         for h in self.app.profile.history[-6:]:
             draw_text(surf, f"{h.year}   {h.series}   P{h.position}", f.small, T.TEXT_DIM,

@@ -212,6 +212,7 @@
     "car_perf": "Car {perf}"
   },
   "standings": {
+    "scene_title": "Standings",
     "subtitle": "scroll to see the full grid",
     "drivers": "DRIVERS",
     "teams": "TEAMS"

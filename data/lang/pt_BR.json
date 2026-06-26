@@ -212,6 +212,7 @@
     "car_perf": "Carro {perf}"
   },
   "standings": {
+    "scene_title": "Classificação",
     "subtitle": "role com o mouse para ver toda a grade",
     "drivers": "PILOTOS",
     "teams": "EQUIPES"
