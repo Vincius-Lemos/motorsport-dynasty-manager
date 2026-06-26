@@ -30,6 +30,7 @@ from game import academies as acad
 from game import save_load
 from game import housing as hsng
 from game.job_search import build_vacancy_list, apply_to_team
+from game.i18n import t, set_language, LANG_NAMES, current_language
 
 CLT_MESSAGES = {
     "formula_4":        "Você virou fiscal de pátio no Autódromo de Interlagos.",
@@ -111,21 +112,25 @@ def header(surf, app, subtitle=""):
 # ══════════════════════════════════════════════════════════════════════════════
 class MenuScene(Scene):
     def on_enter(self):
+        self._rebuild()
+
+    def _rebuild(self):
         f = self.app.fonts
         cx = T.WIDTH // 2
         w, h, gap = 360, 58, 16
         y0 = 330
         self.buttons = [
-            Button((cx - w // 2, y0,            w, h), "CARREIRA DE PILOTO",
+            Button((cx - w // 2, y0,            w, h), t("menu.new_driver"),
                    lambda: self._new("driver"), f.h2, icon="helmet"),
-            Button((cx - w // 2, y0 + (h+gap),  w, h), "CARREIRA DE GERENTE",
+            Button((cx - w // 2, y0 + (h+gap),  w, h), t("menu.new_manager"),
                    lambda: self._new("manager"), f.h2, kind="ghost", icon="team"),
-            Button((cx - w // 2, y0 + 2*(h+gap),w, h), "CARREGAR JOGO",
+            Button((cx - w // 2, y0 + 2*(h+gap),w, h), t("menu.load"),
                    lambda: self.app.push(LoadScene(self.app)), f.h2, kind="ghost", icon="save"),
-            Button((cx - w // 2, y0 + 3*(h+gap),w, h), "SAIR",
+            Button((cx - w // 2, y0 + 3*(h+gap),w, h), t("menu.quit"),
                    self._quit, f.body, kind="ghost"),
         ]
         self._t = 0
+        self._lang_rects = []
 
     def _new(self, mode):
         self.app.mode = mode
@@ -142,6 +147,10 @@ class MenuScene(Scene):
                 if r.collidepoint(event.pos):
                     self.app.set_resolution(idx)
                     self.app.notify(f"Resolução: {T.RESOLUTIONS[idx][0]}")
+            for lang_code, r in getattr(self, "_lang_rects", []):
+                if r.collidepoint(event.pos):
+                    set_language(lang_code)
+                    self._rebuild()
 
     def update(self, dt):
         self._t += dt
@@ -166,30 +175,49 @@ class MenuScene(Scene):
         diamond = [(cx, 244), (cx + 12, 249), (cx, 254), (cx - 12, 249)]
         pygame.draw.polygon(surf, T.ACCENT, diamond)
 
-        draw_text(surf, "Do kart à Fórmula 1 — construa sua dinastia",
+        draw_text(surf, t("menu.tagline"),
                   f.small, T.TEXT_DIM, (cx, 272), center=True)
 
         for b in self.buttons:
             b.draw(surf)
 
+        # seletor de idioma
+        draw_text(surf, t("menu.lang_label"), f.tiny, T.TEXT_FAINT,
+                  (cx, T.HEIGHT - 112), center=True)
+        lang_list = list(LANG_NAMES.items())
+        lang_labels = [v for _, v in lang_list]
+        lw_list = [f.tiny.size(l)[0] + 22 for l in lang_labels]
+        ltotal = sum(lw_list) + 10 * (len(lw_list) - 1)
+        lx = cx - ltotal // 2
+        self._lang_rects = []
+        cur_lang = current_language()
+        for (code, label), lw in zip(lang_list, lw_list):
+            lr = pygame.Rect(lx, T.HEIGHT - 94, lw, 26)
+            active = code == cur_lang
+            pygame.draw.rect(surf, T.ACCENT_2 if active else T.BG_PANEL, lr, border_radius=13)
+            pygame.draw.rect(surf, T.ACCENT_2 if active else T.LINE, lr, width=1, border_radius=13)
+            draw_text(surf, label, f.tiny, T.BG if active else T.TEXT_DIM, lr.center, center=True)
+            self._lang_rects.append((code, lr))
+            lx += lw + 10
+
         # seletor de resolução
-        draw_text(surf, "RESOLUÇÃO  (F11 = tela cheia)", f.tiny, T.TEXT_FAINT,
-                  (cx, T.HEIGHT - 70), center=True)
+        draw_text(surf, t("menu.resolution"), f.tiny, T.TEXT_FAINT,
+                  (cx, T.HEIGHT - 62), center=True)
         labels = [r[0] for r in T.RESOLUTIONS]
         widths = [f.tiny.size(l)[0] + 22 for l in labels]
         total = sum(widths) + 10 * (len(labels) - 1)
         x = cx - total // 2
         self.res_rects = []
         for i, (lab, w) in enumerate(zip(labels, widths)):
-            r = pygame.Rect(x, T.HEIGHT - 50, w, 28)
+            r = pygame.Rect(x, T.HEIGHT - 44, w, 28)
             cur = i == self.app.res_index
             pygame.draw.rect(surf, T.ACCENT if cur else T.BG_PANEL, r, border_radius=14)
             pygame.draw.rect(surf, T.ACCENT if cur else T.LINE, r, width=1, border_radius=14)
             draw_text(surf, lab, f.tiny, T.BG if cur else T.TEXT_DIM, r.center, center=True)
             self.res_rects.append((i, r))
             x += w + 10
-        draw_text(surf, "v0.4  ·  protótipo", f.tiny, T.TEXT_FAINT,
-                  (T.WIDTH - 16, T.HEIGHT - 24), right=True)
+        draw_text(surf, t("menu.version"), f.tiny, T.TEXT_FAINT,
+                  (T.WIDTH - 16, T.HEIGHT - 14), right=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
