@@ -186,7 +186,7 @@ class DriverCareer:
                 return r["pos"]
         return len(quali["rows"])
 
-    def simulate_next_race(self, player_strategy=None) -> Tuple[list, list]:
+    def simulate_next_race(self, player_strategy=None, player_pace=None) -> Tuple[list, list]:
         track = self.current_round()
         if not track:
             return [], []
@@ -230,6 +230,7 @@ class DriverCareer:
             pit_stop_time=self.series_rules["pit_stop_time_seconds"],
             player_strategy=player_strategy,
             grid_order=getattr(self, "_grid_order", None),
+            player_pace=player_pace,
         )
         self._grid_order = None
 
@@ -288,7 +289,8 @@ class DriverCareer:
     def is_sprint_feature_weekend(self) -> bool:
         return RACE_WEEKEND_FORMAT.get(self.current_series_id) == "sprint_feature"
 
-    def simulate_sprint_race(self, is_wet: bool = False) -> Tuple[list, list]:
+    def simulate_sprint_race(self, player_strategy=None, player_pace=None,
+                             is_wet: bool = False) -> Tuple[list, list]:
         """Simula a sprint race com grid invertido do topo da classificação."""
         track = self.current_round()
         if not track:
@@ -308,6 +310,8 @@ class DriverCareer:
             scoring_override=scoring,
             laps_override=sprint_laps,
             fastest_lap_bonus=False,   # sprint não tem bonus de FL
+            player_strategy=player_strategy,
+            player_pace=player_pace,
         )
         # Acumula pontos da sprint sem avançar a rodada
         for r in results:
@@ -324,7 +328,7 @@ class DriverCareer:
         self._add_news_from_race(results, events, "sprint", track.track_name)
         return results, events
 
-    def simulate_feature_race(self, player_strategy=None) -> Tuple[list, list]:
+    def simulate_feature_race(self, player_strategy=None, player_pace=None) -> Tuple[list, list]:
         """Simula a feature race com grid = resultado da sprint."""
         grid = getattr(self, "_feature_grid", None) or getattr(self, "_grid_order", None)
         scoring = FEATURE_SCORING.get(self.current_series_id, [25, 18, 15, 12, 10, 8, 6, 4, 2, 1])
@@ -342,6 +346,7 @@ class DriverCareer:
             player_strategy=player_strategy,
             grid_order=grid,
             scoring_override=scoring,
+            player_pace=player_pace,
         )
         self._feature_grid = None
         # Acumula pontos e avança rodada (mesma lógica de simulate_next_race)

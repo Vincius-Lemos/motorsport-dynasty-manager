@@ -874,9 +874,11 @@ class QualifyingScene(Scene):
     def _to_race(self):
         car = self.app.career
         if hasattr(car, "is_sprint_feature_weekend") and car.is_sprint_feature_weekend():
-            self.app.replace(SprintSimulatingScene(self.app))
+            self.app.replace(StrategyScene(self.app, "sprint",
+                                           lambda a: SprintSimulatingScene(a)))
         else:
-            self.app.replace(SimulatingScene(self.app))
+            rt = "feature" if car.current_series_id == "formula_1" else "race"
+            self.app.replace(StrategyScene(self.app, rt, lambda a: SimulatingScene(a)))
 
     def update(self, dt):
         self.t += dt
@@ -1004,6 +1006,136 @@ class _SimBase(Scene):
         draw_text(surf, t("simulating.preparing") + dots, f.small, T.TEXT_DIM, (cx, cy + 100), center=True)
 
 
+# ── Estratégia de corrida (pneus + paradas + ritmo) ───────────────────────────
+TYRES = [("soft", "MACIO", T.RED), ("medium", "MÉDIO", T.GOLD), ("hard", "DURO", T.TEXT)]
+PACES = [("attack", "ATACAR", T.RED, "Mais rápido · gasta pneu · risco"),
+         ("normal", "NORMAL", T.ACCENT_2, "Equilíbrio"),
+         ("conserve", "CONSERVAR", T.GREEN, "Mais lento · poupa pneu · seguro")]
+
+
+def pit_rules(series_id, race_type):
+    if race_type == "sprint":
+        return (0, 0)
+    if series_id in ("formula_1", "formula_2") and race_type == "feature":
+        return (1, 2)
+    return (0, 2)
+
+
+def _pop_strategy(app):
+    s = getattr(app, "pending_strategy", None)
+    p = getattr(app, "pending_pace", None)
+    app.pending_strategy = None
+    app.pending_pace = None
+    return s, p
+
+
+class StrategyScene(Scene):
+    def __init__(self, app, race_type, next_factory):
+        super().__init__(app)
+        self.race_type = race_type
+        self.next_factory = next_factory
+
+    def on_enter(self):
+        f = self.app.fonts
+        car = self.app.career
+        self.track = car.current_round()
+        self.min_stops, self.max_stops = pit_rules(car.current_series_id, self.race_type)
+        wear = getattr(self.track, "tyre_wear_index", 4) if self.track else 4
+        self.stops = max(self.min_stops, min(self.max_stops, 1 if wear >= 5 else self.min_stops))
+        self.stints = ([2, 1, 2] if wear > 6 else ([1, 2, 2] if wear > 4 else [0, 1, 1])) + [1, 1]
+        self.pace = 1
+        self.auto = False
+        self._rects = {}
+        self.go = Button((T.WIDTH // 2 - 150, T.HEIGHT - 64, 300, 50),
+                         "LARGAR", self._go, f.h2, icon="play")
+        self.auto_btn = Button((T.WIDTH - 250, 96, 210, 42),
+                               "Automático", self._toggle, f.body, kind="ghost")
+
+    def _toggle(self):
+        self.auto = not self.auto
+
+    def _go(self):
+        car = self.app.career
+        drivers = ([car.player_driver] if self.app.profile.mode != "manager"
+                   else car.player_drivers())
+        if self.auto:
+            self.app.pending_strategy = None
+        else:
+            plan = [TYRES[self.stints[i]][0] for i in range(self.stops + 1)]
+            if self.min_stops >= 1 and len(set(plan)) < 2 and len(plan) >= 2:
+                plan[1] = TYRES[(self.stints[0] + 1) % 3][0]
+            self.app.pending_strategy = {d.id: list(plan) for d in drivers if d}
+        self.app.pending_pace = {d.id: PACES[self.pace][0] for d in drivers if d}
+        self.app.replace(self.next_factory(self.app))
+
+    def update(self, dt): ...
+
+    def handle(self, event):
+        self.go.handle(event)
+        self.auto_btn.handle(event)
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for key, rect in self._rects.items():
+                if rect.collidepoint(event.pos):
+                    kind, idx = key
+                    if kind == "stops":
+                        self.stops = idx; self.auto = False
+                    elif kind == "pace":
+                        self.pace = idx
+                    else:
+                        self.stints[kind] = idx; self.auto = False
+
+    def _boxes(self, surf, f, label, y, options, sel, kind, disabled=False, h=46):
+        draw_text(surf, label, f.small, T.TEXT_DIM, (120, y))
+        x = 120
+        for i, opt in enumerate(options):
+            rect = pygame.Rect(x, y + 26, 168, h)
+            on = (i == sel) and not disabled
+            pygame.draw.rect(surf, T.BG_PANEL_2 if on else T.BG_PANEL, rect, border_radius=10)
+            pygame.draw.rect(surf, opt[2] if on else T.LINE, rect, width=3 if on else 1, border_radius=10)
+            draw_text(surf, opt[1], f.h2, opt[2] if on else T.TEXT_DIM, (rect.centerx, rect.y + 5), center=True)
+            if len(opt) > 3:
+                draw_text(surf, opt[3], f.tiny, T.TEXT_FAINT, (rect.centerx, rect.y + h - 15), center=True)
+            self._rects[(kind, i)] = rect
+            x += 182
+
+    def draw(self, surf):
+        gradient_bg(surf)
+        f = self.app.fonts
+        self._rects = {}
+        lbl = {"sprint": "SPRINT", "feature": "FEATURE", "race": "CORRIDA"}.get(self.race_type, "")
+        draw_text(surf, f"ESTRATÉGIA — {lbl}", f.h1, T.ACCENT, (120, 40))
+        if self.track:
+            draw_text(surf, f"{getattr(self.track,'track_name','')} · {getattr(self.track,'laps','?')} voltas · "
+                            f"desgaste {getattr(self.track,'tyre_wear_index','?')}/10",
+                      f.body, T.TEXT_DIM, (120, 92))
+        # paradas
+        draw_text(surf, "PARADAS", f.small, T.TEXT_DIM, (120, 128))
+        x = 120
+        for n in range(self.min_stops, self.max_stops + 1):
+            rect = pygame.Rect(x, 154, 168, 44)
+            on = (n == self.stops)
+            pygame.draw.rect(surf, T.BG_PANEL_2 if on else T.BG_PANEL, rect, border_radius=10)
+            pygame.draw.rect(surf, T.ACCENT if on else T.LINE, rect, width=3 if on else 1, border_radius=10)
+            txt = ("SEM PARAR" if n == 0 else f"{n} PARADA" + ("S" if n != 1 else ""))
+            draw_text(surf, txt, f.body, T.ACCENT if on else T.TEXT_DIM, (rect.centerx, rect.centery - 10), center=True)
+            self._rects[("stops", n)] = rect
+            x += 182
+        # stints
+        y = 216
+        for s in range(self.stops + 1):
+            self._boxes(surf, f, "PNEU DE LARGADA" if s == 0 else f"APÓS PARADA {s}", y, TYRES, self.stints[s], s, self.auto)
+            y += 78
+        # ritmo
+        self._boxes(surf, f, "RITMO", y + 4, PACES, self.pace, "pace", h=52)
+        hint = ("Sem parar: 1 jogo de pneu, só para se furar." if self.stops == 0
+                else f"{self.stops} parada(s): pneu fresco, mas perde tempo no box.")
+        draw_text(surf, hint, f.small, T.TEXT_FAINT, (120, T.HEIGHT - 110))
+        if self.auto:
+            draw_text(surf, "AUTOMÁTICO (a equipe decide)", f.small, T.ACCENT_2, (120, T.HEIGHT - 134))
+        self.auto_btn.draw(surf)
+        self.go.draw(surf)
+
+
 class SimulatingScene(_SimBase):
     @property
     def _label(self): return t("simulating.race")
@@ -1012,7 +1144,8 @@ class SimulatingScene(_SimBase):
         self.t += dt
         if self.t >= self.DURATION and not self.done:
             self.done = True
-            res, ev = self.app.career.simulate_next_race()
+            strat, pace = _pop_strategy(self.app)
+            res, ev = self.app.career.simulate_next_race(strat, pace)
             self.app.replace(RaceResultScene(self.app, res, ev, race_label=t("simulating.race")))
 
 
@@ -1024,10 +1157,12 @@ class SprintSimulatingScene(_SimBase):
         self.t += dt
         if self.t >= self.DURATION and not self.done:
             self.done = True
-            res, ev = self.app.career.simulate_sprint_race()
-            self.app.replace(RaceResultScene(self.app, res, ev,
-                                             race_label=t("simulating.sprint"),
-                                             next_scene_factory=lambda a: FeatureSimulatingScene(a)))
+            strat, pace = _pop_strategy(self.app)
+            res, ev = self.app.career.simulate_sprint_race(strat, pace)
+            self.app.replace(RaceResultScene(
+                self.app, res, ev, race_label=t("simulating.sprint"),
+                next_scene_factory=lambda a: StrategyScene(a, "feature",
+                                                           lambda b: FeatureSimulatingScene(b))))
 
 
 class FeatureSimulatingScene(_SimBase):
@@ -1038,7 +1173,8 @@ class FeatureSimulatingScene(_SimBase):
         self.t += dt
         if self.t >= self.DURATION and not self.done:
             self.done = True
-            res, ev = self.app.career.simulate_feature_race()
+            strat, pace = _pop_strategy(self.app)
+            res, ev = self.app.career.simulate_feature_race(strat, pace)
             self.app.replace(RaceResultScene(self.app, res, ev, race_label="FEATURE RACE"))
 
 
