@@ -186,7 +186,87 @@ class DriverCareer:
                 return r["pos"]
         return len(quali["rows"])
 
-    def simulate_next_race(self, player_strategy=None) -> Tuple[list, list]:
+    def run_fp1_session(self) -> Optional[dict]:
+        """No início do fim de semana, pode haver uma sessão de FP1 (raríssima,
+        via academia). Retorna um dict com o resultado da sessão, ou None."""
+        d = self.player_driver
+        if (not d.academy_id or d.is_injured or
+                self.current_series_id == "formula_1"):
+            return None
+        if not acad.roll_fp1_session(d, d.academy_id, self.current_series_id):
+            return None
+        base = self.series_rules["base_lap_time_seconds"]
+        quality = max(0.0, min(1.0, (d.overall - 55) / 30.0))
+        player_time = base * (1.045 - 0.045 * quality) + random.gauss(0, 0.30)
+
+        roll = random.random()
+        crashed = roll < 0.06
+        broke   = 0.06 <= roll < 0.10
+        stuck   = 0.10 <= roll < 0.13
+        outcome = ("crash" if crashed else "mech" if broke else
+                   "stuck" if stuck else "ok")
+        laps = 0 if stuck else random.randint(8, 22)
+
+        tid = self.current_team.id if self.current_team else None
+        titular = next((x for x in self.all_drivers
+                        if x.team_id == tid and x.id != d.id), None)
+        tit_time = (base * (1.0 - 0.02 * max(0.0, min(1.0, (titular.overall - 55) / 30.0)))
+                    + random.gauss(0, 0.22)) if titular else player_time
+        gap = player_time - tit_time
+
+        field = [x for x in self.all_drivers if not x.is_injured]
+        times = sorted(base * (1.05 - 0.05 * max(0.0, min(1.0, (x.overall - 55) / 30.0)))
+                       for x in field)
+        pos = min(len(field), sum(1 for tt in times if tt < player_time) + 1)
+
+        pts = 0 if (crashed or stuck) else sl.award_fp1_bonus(d)
+        d.gain_race_xp(8 if not (crashed or stuck) else 3)
+        impressed = (outcome == "ok" and gap < 0.15 and pos <= len(field) * 0.5)
+
+        verb = {"crash": "bateu o carro", "mech": "teve quebra mecânica",
+                "stuck": "ficou preso no box",
+                "ok": "impressionou" if impressed else "fez uma sessão discreta"}[outcome]
+        team_name = self.current_team.name if self.current_team else "a equipe"
+        self._push_news("fp1", f"{d.name} {verb} no FP1 pela {team_name}",
+                        driver_id=d.id)
+        return {
+            "track": self.current_round().track_name if self.current_round() else "",
+            "team": team_name, "time": player_time, "pos": pos, "field": len(field),
+            "titular": titular.name if titular else "—", "gap": gap, "laps": laps,
+            "outcome": outcome, "sl_pts": pts, "impressed": impressed,
+        }
+
+    def _sub_in_reserve(self):
+        """Se o jogador está lesionado, um reserva assume o carro nesta etapa."""
+        if not (self.player_driver.is_injured and self.current_team):
+            return None
+        team_drivers = [d for d in self.all_drivers
+                        if d.team_id == self.current_team.id]
+        reserve = inj.find_reserve_driver(self.player_driver, team_drivers, self.all_drivers)
+        if not reserve:
+            return None
+        if reserve.team_id != self.current_team.id:
+            reserve._reserve_restore = reserve.team_id
+            reserve.team_id = self.current_team.id
+        return reserve
+
+    def _restore_reserve(self, reserve):
+        if reserve is not None and hasattr(reserve, "_reserve_restore"):
+            reserve.team_id = reserve._reserve_restore
+            del reserve._reserve_restore
+
+    def _reserve_event(self, reserve):
+        if reserve is None:
+            return None
+        desc = f"Você está lesionado — {reserve.name} assume seu carro nesta etapa."
+        try:
+            self._push_news("injury", desc, driver_id=reserve.id)
+        except Exception:
+            pass
+        return type("Ev", (), {"lap": 0, "event_type": "injury",
+                               "description": desc, "affects_driver": None})()
+
+    def simulate_next_race(self, player_strategy=None, player_pace=None) -> Tuple[list, list]:
         track = self.current_round()
         if not track:
             return [], []
@@ -207,19 +287,9 @@ class DriverCareer:
                 injury_events.append(ev)
                 self.injury_log.append(ev)
 
-        # FP1 da academia (não para titular de F1)
-        if (self.player_driver.academy_id and
-                self.current_series_id != "formula_1"):
-            if acad.roll_fp1_session(self.player_driver, self.player_driver.academy_id,
-                                     self.current_series_id):
-                pts = sl.award_fp1_bonus(self.player_driver)
-                self.player_driver.gain_race_xp(8)
-                fp1_events.append({
-                    "driver": self.player_driver.name,
-                    "sl_pts": pts,
-                    "academy": self.player_driver.academy_id,
-                })
+        # (FP1 agora roda no início do fim de semana via run_fp1_session, com tela)
 
+        reserve = self._sub_in_reserve()
         active_drivers = [d for d in self.all_drivers if not d.is_injured]
         teams_dict = {t.id: t for t in self.all_teams}
         results, events = simulate_race(
@@ -230,8 +300,11 @@ class DriverCareer:
             pit_stop_time=self.series_rules["pit_stop_time_seconds"],
             player_strategy=player_strategy,
             grid_order=getattr(self, "_grid_order", None),
+            player_pace=player_pace,
         )
         self._grid_order = None
+        reserve_ev = self._reserve_event(reserve)
+        self._restore_reserve(reserve)
 
         for r in results:
             self.standings_drivers[r.driver_id] = (
@@ -269,6 +342,8 @@ class DriverCareer:
         self.season.current_round += 1
 
         meta_events = list(events)
+        if reserve_ev is not None:
+            meta_events.insert(0, reserve_ev)
         for ev in injury_events:
             meta_events.append(
                 type("Ev", (), {"lap": 0, "event_type": "injury",
@@ -288,7 +363,8 @@ class DriverCareer:
     def is_sprint_feature_weekend(self) -> bool:
         return RACE_WEEKEND_FORMAT.get(self.current_series_id) == "sprint_feature"
 
-    def simulate_sprint_race(self, is_wet: bool = False) -> Tuple[list, list]:
+    def simulate_sprint_race(self, player_strategy=None, player_pace=None,
+                             is_wet: bool = False) -> Tuple[list, list]:
         """Simula a sprint race com grid invertido do topo da classificação."""
         track = self.current_round()
         if not track:
@@ -296,6 +372,7 @@ class DriverCareer:
         grid = sprint_grid_from_quali(getattr(self, "_grid_order", []) or [], self.current_series_id)
         scoring = SPRINT_SCORING.get(self.current_series_id, [8, 7, 6, 5, 4, 3, 2, 1])
         sprint_laps = max(10, track.laps // 3)
+        reserve = self._sub_in_reserve()
         active_drivers = [d for d in self.all_drivers if not d.is_injured]
         teams_dict = {t.id: t for t in self.all_teams}
         results, events = simulate_race(
@@ -308,7 +385,13 @@ class DriverCareer:
             scoring_override=scoring,
             laps_override=sprint_laps,
             fastest_lap_bonus=False,   # sprint não tem bonus de FL
+            player_strategy=player_strategy,
+            player_pace=player_pace,
         )
+        rev = self._reserve_event(reserve)
+        self._restore_reserve(reserve)
+        if rev is not None:
+            events = [rev] + list(events)
         # Acumula pontos da sprint sem avançar a rodada
         for r in results:
             self.standings_drivers[r.driver_id] = (
@@ -324,13 +407,14 @@ class DriverCareer:
         self._add_news_from_race(results, events, "sprint", track.track_name)
         return results, events
 
-    def simulate_feature_race(self, player_strategy=None) -> Tuple[list, list]:
+    def simulate_feature_race(self, player_strategy=None, player_pace=None) -> Tuple[list, list]:
         """Simula a feature race com grid = resultado da sprint."""
         grid = getattr(self, "_feature_grid", None) or getattr(self, "_grid_order", None)
         scoring = FEATURE_SCORING.get(self.current_series_id, [25, 18, 15, 12, 10, 8, 6, 4, 2, 1])
         track = self.current_round()
         if not track:
             return [], []
+        reserve = self._sub_in_reserve()
         active_drivers = [d for d in self.all_drivers if not d.is_injured]
         teams_dict = {t.id: t for t in self.all_teams}
         results, events = simulate_race(
@@ -342,7 +426,12 @@ class DriverCareer:
             player_strategy=player_strategy,
             grid_order=grid,
             scoring_override=scoring,
+            player_pace=player_pace,
         )
+        rev = self._reserve_event(reserve)
+        self._restore_reserve(reserve)
+        if rev is not None:
+            events = [rev] + list(events)
         self._feature_grid = None
         # Acumula pontos e avança rodada (mesma lógica de simulate_next_race)
         for r in results:

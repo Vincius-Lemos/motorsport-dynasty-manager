@@ -114,7 +114,7 @@ class ManagerCareer:
             d.gain_race_xp(3)
         return res
 
-    def simulate_next_race(self, player_strategy=None) -> Tuple[list, list]:
+    def simulate_next_race(self, player_strategy=None, player_pace=None) -> Tuple[list, list]:
         track = self.current_round()
         if not track:
             return [], []
@@ -154,6 +154,7 @@ class ManagerCareer:
             pit_stop_time=self.series_rules["pit_stop_time_seconds"],
             player_strategy=player_strategy,
             grid_order=getattr(self, "_grid_order", None),
+            player_pace=player_pace,
         )
         self._grid_order = None
 
@@ -196,7 +197,8 @@ class ManagerCareer:
     def is_sprint_feature_weekend(self) -> bool:
         return RACE_WEEKEND_FORMAT.get(self.current_series_id) == "sprint_feature"
 
-    def simulate_sprint_race(self, is_wet: bool = False) -> Tuple[list, list]:
+    def simulate_sprint_race(self, player_strategy=None, player_pace=None,
+                             is_wet: bool = False) -> Tuple[list, list]:
         """Simula a sprint race do fim de semana F2/F3."""
         track = self.current_round()
         if not track:
@@ -216,6 +218,8 @@ class ManagerCareer:
             scoring_override=scoring,
             laps_override=sprint_laps,
             fastest_lap_bonus=False,
+            player_strategy=player_strategy,
+            player_pace=player_pace,
         )
         for r in results:
             self.standings_drivers[r.driver_id] = (
@@ -230,7 +234,7 @@ class ManagerCareer:
         self._add_news_from_race(results, events, "sprint", track.track_name)
         return results, events
 
-    def simulate_feature_race(self, player_strategy=None) -> Tuple[list, list]:
+    def simulate_feature_race(self, player_strategy=None, player_pace=None) -> Tuple[list, list]:
         """Simula a feature race com grid = resultado da sprint."""
         track = self.current_round()
         if not track:
@@ -248,6 +252,7 @@ class ManagerCareer:
             player_strategy=player_strategy,
             grid_order=grid,
             scoring_override=scoring,
+            player_pace=player_pace,
         )
         self._feature_grid = None
         self._grid_order = None

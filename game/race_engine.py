@@ -111,11 +111,16 @@ def simulate_race(
     scoring_override: Optional[List[int]] = None,
     laps_override: Optional[int] = None,
     fastest_lap_bonus: bool = True,
+    player_pace: Optional[Dict[str, str]] = None,
 ) -> Tuple[List[RaceResult], List[RaceEvent]]:
 
     active_scoring = scoring_override if scoring_override is not None else SCORING
     race_laps = laps_override if laps_override is not None else track.laps
     grid_pos = {did: i for i, did in enumerate(grid_order)} if grid_order else None
+    player_pace = player_pace or {}
+    # ritmo: atacar (mais rápido, mais desgaste/risco) … conservar (oposto)
+    PACE_LAP = {"attack": -0.35, "normal": 0.0, "conserve": 0.45}
+    PACE_RISK = {"attack": 1.7, "normal": 1.0, "conserve": 0.6}
 
     states: List[DriverRaceState] = []
     for drv in drivers:
@@ -127,6 +132,7 @@ def simulate_race(
         else:
             strategy = pick_strategy(drv, team, track)
         st = DriverRaceState(drv, team, strategy, base_lap_time)
+        st.pace_mode = player_pace.get(drv.id, "normal")
         if grid_pos is not None and drv.id in grid_pos:
             # largada a partir do grid da classificação (cada posição = pequena vantagem)
             st.total_time = grid_pos[drv.id] * 0.20 + random.gauss(0, 0.08)
@@ -135,6 +141,17 @@ def simulate_race(
             pace_penalty = (90.0 - st.pace_rating()) * 0.05
             st.total_time = qual_noise + pace_penalty
         states.append(st)
+
+    # Paradas planejadas do jogador (estratégia fixa): nº paradas = len(strategy)-1,
+    # distribuídas pela corrida. 0 paradas = vai até o fim com um pneu.
+    forced_ids = set(player_strategy.keys()) if player_strategy else set()
+    planned_pits = {}
+    for st in states:
+        if st.driver.id in forced_ids:
+            stops = max(0, len(st.strategy) - 1)
+            planned_pits[st.driver.id] = {
+                round(race_laps * (k + 1) / (stops + 1)) for k in range(stops)
+            }
 
     states.sort(key=lambda s: s.total_time)
     for i, st in enumerate(states):
@@ -159,10 +176,11 @@ def simulate_race(
             if st.dnf:
                 continue
 
-            # Random DNF events
+            # Random DNF events (atacar aumenta o risco)
+            risk_mult = PACE_RISK.get(getattr(st, "pace_mode", "normal"), 1.0)
             for ev_type, chance in [("engine_failure", EVENT_CHANCES["engine_failure"]),
-                                     ("puncture", EVENT_CHANCES["puncture"]),
-                                     ("crash", EVENT_CHANCES["crash"])]:
+                                     ("puncture", EVENT_CHANCES["puncture"] * risk_mult),
+                                     ("crash", EVENT_CHANCES["crash"] * risk_mult)]:
                 if random.random() < chance / track.laps:
                     st.dnf = True
                     st.dnf_reason = ev_type.replace("_", " ").title()
@@ -174,12 +192,19 @@ def simulate_race(
                 continue
 
             laps_left = race_laps - lap
-            if st.needs_pit(laps_left) and laps_left > 0:
+            if st.driver.id in forced_ids:
+                # jogador: para exatamente nas voltas planejadas
+                if (lap in planned_pits[st.driver.id]
+                        and st.current_tyre_idx < len(st.strategy) - 1):
+                    st.do_pit(pit_stop_time)
+            elif st.needs_pit(laps_left) and laps_left > 0:
                 st.do_pit(pit_stop_time)
 
-            lt = st.lap_time(track, safety_car)
+            lt = st.lap_time(track, safety_car) + PACE_LAP.get(getattr(st, "pace_mode", "normal"), 0.0)
             st.total_time += lt
             st.tyre_age += 1
+            if getattr(st, "pace_mode", "normal") == "attack" and random.random() < 0.18:
+                st.tyre_age += 1
             st.laps_completed = lap
             if lt < st.fastest_lap_time:
                 st.fastest_lap_time = lt
