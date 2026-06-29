@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Saves do jogo
+saves/
+
+# Build / dist
+build/
+dist/
+!dist/MotorsportDynasty.exe
+
+# Teste temporário
+_smoke*.py
+_test*.py
+
+# Config local do Claude Code
+.claude/
