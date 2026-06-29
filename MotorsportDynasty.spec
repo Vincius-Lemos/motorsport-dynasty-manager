@@ -5,6 +5,7 @@ datas = [
     ('data', 'data'),
     ('gui', 'gui'),
     ('game', 'game'),
+    ('assets', 'assets'),
 ]
 binaries = []
 hiddenimports = [

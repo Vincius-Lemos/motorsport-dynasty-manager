@@ -10,7 +10,7 @@ saves/
 
 # Build / dist
 build/
-dist/
+dist/*
 !dist/MotorsportDynasty.exe
 
 # Teste temporário
