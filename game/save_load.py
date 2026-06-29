@@ -7,6 +7,16 @@ from typing import Optional
 from .models import Driver, Team, Season, SeasonRound
 from .player_profile import PlayerProfile, CareerEntry
 
+
+def _atomic_dump(data, path):
+    """Grava o JSON de forma atômica (temp + replace) para nunca corromper o save."""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
 # Quando empacotado como .exe, salva ao lado do executável.
 # Em desenvolvimento, salva em ../saves relativo ao módulo.
 if getattr(sys, "frozen", False):
@@ -102,8 +112,7 @@ def save_driver_career(profile: PlayerProfile, career, slot: str = "save1") -> s
         "contract_next_year":      getattr(career, "_contract_next_year", None),
         "contract_next_series":    getattr(career, "_contract_next_series", None),
     }
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    _atomic_dump(data, path)
     return path
 
 
@@ -199,8 +208,7 @@ def save_manager_career(profile: PlayerProfile, career, slot: str = "save1") -> 
         "news_feed":         getattr(career, "news_feed", []),
         "npc_state":         getattr(career, "_npc_state", {}),
     }
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    _atomic_dump(data, path)
     return path
 
 
@@ -272,12 +280,15 @@ def load_game(slot: str = "save1"):
     path = os.path.join(SAVES_DIR, f"{slot}.json")
     if not os.path.exists(path):
         return None, None
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    mode = data.get("game_mode", "manager")
-    if mode == "driver":
-        return load_driver_career(slot)
-    return load_manager_career(slot)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        mode = data.get("game_mode", "manager")
+        if mode == "driver":
+            return load_driver_career(slot)
+        return load_manager_career(slot)
+    except (json.JSONDecodeError, OSError, ValueError, KeyError, TypeError):
+        return None, None
 
 
 def list_saves() -> list:
@@ -288,9 +299,18 @@ def list_saves() -> list:
         if not fname.endswith(".json"):
             continue
         path = os.path.join(SAVES_DIR, fname)
-        with open(path, encoding="utf-8") as fp:
-            d = json.load(fp)
-        p = d.get("profile", {})
+        try:
+            with open(path, encoding="utf-8") as fp:
+                d = json.load(fp)
+        except (json.JSONDecodeError, OSError, ValueError):
+            # save corrompido/truncado — ignora em vez de quebrar a tela
+            result.append({
+                "slot":     fname.replace(".json", ""),
+                "saved_at": "?", "mode": "corrompido", "name": "(arquivo inválido)",
+                "year": "?", "series": "?", "version": "?", "corrupt": True,
+            })
+            continue
+        p = d.get("profile", {}) if isinstance(d, dict) else {}
         result.append({
             "slot":     fname.replace(".json", ""),
             "saved_at": d.get("saved_at", "?"),
