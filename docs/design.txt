@@ -1,0 +1,663 @@
+Documento técnico para geração assistida por IA de um manager de automobilismo modular
+Resumo executivo
+Este documento especifica um jogo de automobilismo de longa duração, orientado a carreira, com três modos integrados no mesmo universo persistente: Manager, Piloto e Legacy. A proposta combina progressão não linear, múltiplas escadas competitivas, saltos de categoria, requisitos regulatórios inspirados na Super Licença, simulação de corrida em profundidade configurável e um sistema de modding/atualização desenhado desde o início para conteúdo externo. A recomendação principal é implementar o projeto em Godot 4 com C# ou GDScript, exportando build para Windows e organizando o conteúdo em arquivos externos JSON mais bancos SQLite; como alternativa de perfil mais “aplicativo de gestão”, a pilha .NET + Avalonia é viável, sobretudo para interfaces densas em tabelas e workflows de escritório. Godot suporta exportação para Windows, GDScript e C#, leitura e escrita de arquivos em tempo de execução, e também carregamento de PCK/ZIP em runtime para packs, patches e mods; Avalonia é um framework .NET multiplataforma com DataGrid e localização via ResX; SQLite é autocontido, serverless e zero-configuration, o que o torna adequado para saves, histórico de temporadas, estatísticas e telemetria local. [1]
+Em termos esportivos, a base oficial mais sólida para o ramo de monopostos é a escada FIA karting → Fórmula 4 → Formula Regional → FIA F3 → FIA F2 → F1; a FIA descreve a Formula Regional como o degrau seguinte à F4 na Single-Seater Pathway e registrou cinco campeonatos Formula Regional globais em 2024, além de treze campeonatos Fórmula 4 em 2025. Para a escada americana, a USF Pro Championships define um caminho formal USF Juniors → USF2000 → USF Pro 2000, enquanto a INDY NXT é a série de desenvolvimento da INDYCAR. Em endurance, fontes oficiais descrevem GT4 como degrau para GT3, LMP3 como categoria de desenvolvimento, LMP2 como parte central da “família endurance” rumo ao topo, e o FIA WEC como palco das classes Hypercar e LMGT3. No turismo alemão, o programa oficial “Road to DTM” liga karting, GT4 Germany, ADAC GT Masters e DTM; no TCR, o FIA TCR World Tour se apresenta como o topo do conceito que conecta séries regionais e nacionais; e, na NASCAR, a própria organização descreve NASCAR Regional, ARCA/Whelen e as séries nacionais como uma escada para Cup, Xfinity e Truck. [2]
+O ponto decisivo para que Codex e Claude consigam gerar código e conteúdo com consistência é tratar o jogo como um conjunto de módulos bem delimitados: modelos de dados, carregador de conteúdo, simulador de corrida, sistema de carreira, UI, save/load, validadores de mods e ferramentas de balanceamento. Isso é coerente com o que as documentações oficiais descrevem: Codex é um agente de código voltado a escrever, revisar e depurar software, adaptando-se à estrutura do projeto; Claude Code é um assistente agentic que entende um codebase, edita múltiplos arquivos e executa tarefas de desenvolvimento; ambos funcionam melhor quando recebem um contrato claro de arquivos, testes e critérios de aceitação. [3]
+Os pontos ainda não especificados pelo briefing e que devem permanecer parametrizáveis no design são: orçamento inicial por equipe, número exato de desenvolvedores, linguagem preferencial de scripts entre C# e GDScript, tamanho do grid por categoria, nível de fidelidade da pilotagem ativa, ambição de multiplayer, janela de suporte para temporadas históricas e escopo do editor de mods.
+Produto e escopo
+A visão de produto é a de um simulador de carreira no automobilismo, não apenas um manager de Fórmula 1. Isso significa que o jogador pode começar em kart, F4, Formula Regional, F3, F2, USF/Indy, GT, endurance ou NASCAR, com progressão por mérito, dinheiro, reputação, disponibilidade regulatória e oportunidades de mercado. A variação entre saves deve ser um objetivo central do design: um save pode terminar em um título na F1; outro, numa carreira inteira de endurance; outro, numa trajetória americana com IndyCar ou NASCAR; outro, num caminho travado por falta de verba, Super Licença ou proposta competitiva. Essa diversidade é coerente com o espaço de mercado observado em managers atuais: Open Wheel Manager 2 enfatiza estratégia, staff, pesquisa e patrocínio; GT Manager construí uma carreira de GT4 até Hypercar; e A Racing Manager – Team Principal se posiciona como sandbox profundo e customizável. [4]
+A especificação deve assumir três modos, mas com a mesma camada de mundo, calendário, reputações e contratos. O jogo, portanto, não deve ser construído como “três campanhas separadas”, e sim como uma única simulação persistente com diferentes pontos de entrada de controle.
+No Modo Manager, a corrida é indireta: o jogador decide stints, estratégia, ordens de equipe, ritmo, combustível, pneus, chamadas de box, trocas de pilotos, setup e gestão de risco. No Modo Piloto, a corrida é ativa: o jogador assume a condução quando desejar, especialmente em treino, classificação, corrida, revezamento de endurance, FP1/FP2 e chamadas de substituição. No Modo Legacy, o save deve permitir transições como piloto → reserva → diretor esportivo → team principal → dono de equipe. Essa persistência é especialmente valiosa em um gênero no qual jogos existentes já mostram apetite por progressão longa, universos customizáveis e ascensão por categorias, mas normalmente não unem carreira individual, gestão total e saltos laterais entre famílias esportivas no mesmo save. [5]
+A consequência prática é que todos os sistemas centrais — calendário, contratos, reputação, regressão por idade, academias, patrocinadores, Super Licença e eventos emergentes — precisam ser desenhados como serviços reutilizáveis, não como scripts exclusivos de um modo.
+Ecossistema competitivo e progressão
+As hierarquias abaixo convertem estruturas oficiais em uma especificação jogável. Onde o briefing do projeto exige cobertura geográfica maior que a observada nas fontes oficiais levantadas aqui, a recomendação técnica é usar equivalentes ficcionais inspirados em ecossistemas reais, mantendo nomes, equipes, pinturas e logotipos como conteúdo original. A base oficial para as rotas realmente existentes está na escada FIA de monopostos, no ladder da USF/INDYCAR, no conjunto endurance/GT, no “Road to DTM”, no TCR World Tour e na escada NASCAR. [6]
+Famílias de categorias
+Formulas regionais por continente
+Opções de início de carreira
+Fluxo de carreira não linear
+Esse diagrama não deve ser interpretado como uma árvore rígida. O sistema de carreira precisa permitir migração lateral, saltos de categoria, retornos forçados, desvios por contrato e bloqueio de progressão quando faltarem reputação, pontos, verba, vaga ou requisito regulatório.
+Mecânicas centrais e simulação
+A camada de carreira deve ser comandada por um sistema de oportunidades. Em vez de desbloquear automaticamente a categoria seguinte, o jogador recebe propostas a partir da combinação de resultado esportivo, reputação multidimensional, orçamento, academias, marketing, nacionalidade, idade, disponibilidade de assentos, exigências de patrocinadores, requisito de licenças e interesse de fabricantes. Esse modelo conversa com a realidade regulatória da F1, na qual a entrada no topo depende de critérios formais de licença, mas também da existência de uma vaga e da validação da equipe e da FIA. A própria Appendix L 2026 mantém regras explícitas para Super Licença completa, Free Practice Only Super Licence e exceções por discricionariedade da FIA, sugerindo que o jogo trate “estar elegível” como algo diferente de “receber contrato”. [20]
+Mecânicas obrigatórias
+Super Licença e elegibilidade
+Como regra de referência para o modo F1, o jogo deve modelar o núcleo da Appendix L 2026 como dados externos por temporada, não como constantes de código. Em 2026, a FIA exige para a Super Licença completa: licença internacional Grade A; idade mínima de 18 anos no primeiro evento de F1, com exceção discricionária para 17 anos; um questionário/regra de briefing; pelo menos 80% de duas temporadas completas em campeonatos de monopostos listados; e, como caminho normal, pelo menos 40 pontos, com regras adicionais para FP-only, excepcionalidade e força maior. A tabela 2026 também prevê até 10 pontos adicionais por sessões de treinos livres de F1 de ao menos 100 km sem penalty points; o acúmulo de no máximo dois campeonatos dentro do mesmo ano civil sob certas condições; e um teto de 12 pontos de karting, válidos por cinco anos. [21]
+Essa camada abre espaço para mecânicas que o briefing pede explicitamente: o jogador pode pular F3 e ir para F2, pode virar reserva após vencer F2, pode disputar uma carreira paralela em Indy ou endurance enquanto aguarda vaga na F1, e pode ser chamado emergencialmente por lesão, suspensão, doença ou rompimento contratual. O procedimento FIA de aplicação inclusive admite, em caso de troca de piloto por motivos de força maior, pedidos até 48 horas antes da vistoria inicial, o que é uma boa âncora para o design de substituições de última hora. [22]
+Reputação multidimensional
+A reputação precisa ser um vetor, não um único número. Um modelo inicial robusto é:
+Equipes diferentes devem atribuir pesos diferentes a esse vetor. Uma equipe de ponta em F1 pode priorizar velocidade, consistência e feedback técnico; um fabricante de endurance pode valorizar gestão de tráfego, adaptabilidade e trabalho em equipe; uma equipe pequena da F2 pode valorizar custo, marketing e potencial.
+Simulação de corrida
+A simulação deve operar em três camadas sincronizadas. A primeira é a camada de estado contínuo: combustível/energia, pneus, temperatura, danos, saúde do piloto, stint, tráfego, posição, setores, delta de pace e alianças estratégicas. A segunda é uma camada de tomada de decisão: IA da equipe, IA de piloto, ordens, pit windows, push/conserve, undercut/overcut, trocas de piloto, cautions, safety car, VSC, bandeiras, chuva e incidentes. A terceira é a camada de apresentação: tabela ao vivo, mapa 2D, rádio textual, replay simples de eventos-chave e, no modo Piloto, pilotagem controlável. Essa abordagem é especialmente adequada para Godot, cuja arquitetura de nós/cenas, sistema de UI baseado em Control, HUD em CanvasLayer e leitura/escrita de arquivos se encaixam bem em um sim 2D orientado a interface. [23]
+A recomendação é usar um RNG determinístico por seed, com logs de eventos estruturados. Isso permite reprodução de bugs, testes de regressão e balanceamento massivo. O simulador deve registrar cada decisão relevante em um RaceEventLog: ultrapassagem, pit stop, incidente, bandeira, ordem, falha mecânica, evolução climática, penalidade e chamada de substituição.
+Dupla experiência de corrida
+No Manager, o UX de corrida deve privilegiar informação e decisão. A tela principal deve mostrar classificação, pneus, combustível/energia, estado de stint, janela de pit, forecast do clima, rádio, barras de risco e painel de ordens. O jogador escolhe o ritmo e a agressividade, e o algoritmo executa. No Piloto, o HUD deve manter as mesmas informações, mas com prioridade para delta, ERS/energia, pneus, estado do carro, rádio, meta de stint e instruções da equipe. O mesmo estado de corrida deve alimentar ambos os modos para que o save permaneça coerente.
+Arquitetura técnica, dados e modding
+Stack recomendada
+A recomendação principal é Godot 4 + C# para o projeto jogável, com GDScript reservado a ferramentas rápidas, protótipos e scripts de conteúdo. A justificativa é pragmática: Godot é gratuito, open source, exporta para Windows, tem UI 2D madura, suporta GDScript e C#, permite packs PCK/ZIP em runtime e oferece APIs nativas para arquivo, diretórios, recursos e tradução. A alternativa .NET + Avalonia é muito boa para editores, launchers, validadores de dados e ferramentas internas, ou até para um protótipo mais “planilha/desktop”. Avalonia é um framework UI multiplataforma em .NET, com DataGrid e localidade via ResX; além disso, .NET suporta publicação self-contained e single-file para .exe, embora isso tenha trade-offs de tamanho e atualização. [24]
+A recomendação de build para entrega ao jogador é:
+Windows: Game.exe + data.pck + /data + /mods + /saves
+Se a equipe quiser um launcher, editor de mods ou validador separado, faz sentido usar Avalonia para essa ferramenta e Godot para o runtime jogável.
+Organização de pastas
+/Game
+  Game.exe
+  game.pck
+  /data
+    /series
+    /drivers
+    /teams
+    /tracks
+    /rules
+    /sponsors
+    /academies
+    /contracts
+    /localization
+  /mods
+    /enabled
+    /disabled
+  /saves
+  /logs
+  /tools
+    content_validator.exe
+    telemetry_analyzer.exe
+O ideal é adotar uma arquitetura JSON para conteúdo estático/moddable e SQLite para estado relacional de save, histórico e estatísticas. JSON é natural para serialização e packs de dados em Godot; SQLite é autocontido e sem servidor, o que reduz fricção de instalação e facilita backup de saves e analytics locais. [25]
+Arquitetura de dados
+Entidades principais
+Modelo relacional sugerido
+Tabelas SQLite mínimas
+Esquemas JSON recomendados
+Manifesto de categoria
+{
+  "id": "fr_europe",
+  "display_name": "Regional Europeia",
+  "family": "single_seater",
+  "tier": 3,
+  "entry_points": ["career", "legacy"],
+  "cars_per_team": 2,
+  "driver_roles": ["race_driver"],
+  "calendar_ref": "calendar_fr_europe_2027",
+  "ruleset_ref": "rules_fr_standard",
+  "promotion_targets": ["fia_f3", "indy_nxt", "gt3_factory_test"],
+  "super_licence_points_ref": "fia_2026_fr_europe",
+  "min_driver_age": 16,
+  "budget_band": "medium_low"
+}
+Manifesto de equipe
+{
+  "id": "aurora_junior_racing",
+  "display_name": "Aurora Junior Racing",
+  "series_id": "fr_europe",
+  "base_country": "ITA",
+  "budget": 1800000,
+  "facilities": {
+    "factory": 2,
+    "simulator": 1,
+    "r_and_d": 2,
+    "pit_crew": 2,
+    "marketing": 1
+  },
+  "philosophy_weights": {
+    "raw_speed": 0.25,
+    "potential": 0.20,
+    "feedback": 0.20,
+    "marketability": 0.10,
+    "cost_efficiency": 0.25
+  },
+  "academy_affiliation": "silver_star_academy"
+}
+Regras de licença
+{
+  "season": 2026,
+  "full_f1_super_licence": {
+    "min_age": 18,
+    "exceptional_min_age": 17,
+    "required_points": 40,
+    "force_majeure_points_floor": 30,
+    "min_completed_seasons_percent": 80,
+    "min_single_seater_seasons": 2,
+    "fp_bonus_per_event": 1,
+    "fp_bonus_max": 10,
+    "karting_points_max": 12,
+    "karting_points_valid_years": 5
+  }
+}
+Exemplos de código críticos
+Os snippets abaixo são esqueleto de implementação, pensados para que Codex e Claude gerem o restante do módulo a partir deles. Eles seguem a organização e as APIs documentadas de Godot para C#, GDScript, JSON, FileAccess e DirAccess. [26]
+Classe de piloto em C
+using System;
+using System.Collections.Generic;
+
+namespace MotorsportCareer.Core.Models;
+
+public sealed class Pilot
+{
+    public string Id { get; init; } = "";
+    public string DisplayName { get; set; } = "";
+    public string Nationality { get; set; } = "";
+    public int Age { get; set; }
+
+    public int RawSpeed { get; set; }
+    public int Consistency { get; set; }
+    public int WetWeather { get; set; }
+    public int Overtaking { get; set; }
+    public int Defending { get; set; }
+    public int TyreManagement { get; set; }
+    public int EnergyManagement { get; set; }
+    public int TechnicalFeedback { get; set; }
+    public int Marketability { get; set; }
+    public int Potential { get; set; }
+    public int Adaptability { get; set; }
+
+    public int SuperLicencePoints { get; set; }
+    public bool EligibleForFullF1SuperLicence { get; set; }
+    public bool EligibleForFpOnlySuperLicence { get; set; }
+
+    public Dictionary<string, double> DynamicReputation { get; } = new();
+
+    public double GetWeightedScore(Dictionary<string, double> weights)
+    {
+        double score = 0.0;
+        score += RawSpeed * weights.GetValueOrDefault("raw_speed", 0);
+        score += Consistency * weights.GetValueOrDefault("consistency", 0);
+        score += WetWeather * weights.GetValueOrDefault("wet_weather", 0);
+        score += Overtaking * weights.GetValueOrDefault("overtaking", 0);
+        score += TechnicalFeedback * weights.GetValueOrDefault("technical_feedback", 0);
+        score += Marketability * weights.GetValueOrDefault("marketability", 0);
+        score += Potential * weights.GetValueOrDefault("potential", 0);
+        return score;
+    }
+}
+Loader de mods em GDScript
+extends Node
+class_name ModLoader
+
+const MODS_DIR := "user://mods/enabled"
+
+var loaded_mods: Array[Dictionary] = []
+
+func scan_mods() -> Array[Dictionary]:
+    loaded_mods.clear()
+
+    if not DirAccess.dir_exists_absolute(MODS_DIR):
+        DirAccess.make_dir_recursive_absolute(MODS_DIR)
+        return loaded_mods
+
+    var dir := DirAccess.open(MODS_DIR)
+    if dir == null:
+        push_error("Não foi possível abrir o diretório de mods.")
+        return loaded_mods
+
+    dir.list_dir_begin()
+    var entry := dir.get_next()
+
+    while entry != "":
+        if dir.current_is_dir():
+            var manifest_path := "%s/%s/mod_manifest.json" % [MODS_DIR, entry]
+            if FileAccess.file_exists(manifest_path):
+                var mod_data := _load_json_file(manifest_path)
+                if mod_data.get("id", "") != "":
+                    loaded_mods.append(mod_data)
+        entry = dir.get_next()
+
+    dir.list_dir_end()
+    return loaded_mods
+
+func _load_json_file(path: String) -> Dictionary:
+    var file := FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        return {}
+
+    var text := file.get_as_text()
+    var json := JSON.new()
+    var err := json.parse(text)
+
+    if err != OK:
+        push_error("JSON inválido em %s" % path)
+        return {}
+
+    if typeof(json.data) != TYPE_DICTIONARY:
+        push_error("Manifesto de mod precisa ser um objeto JSON: %s" % path)
+        return {}
+
+    return json.data
+Resolvedor de oportunidades de carreira em C
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using MotorsportCareer.Core.Models;
+
+namespace MotorsportCareer.Core.Career;
+
+public sealed record CareerOpportunity(
+    string TargetSeriesId,
+    string TeamId,
+    string Role,
+    bool RequiresSuperLicence,
+    double Score,
+    string Rationale
+);
+
+public sealed class OpportunityResolver
+{
+    public IReadOnlyList<CareerOpportunity> Resolve(
+        Pilot pilot,
+        IEnumerable<TeamProfile> teams,
+        CareerContext context)
+    {
+        var results = new List<CareerOpportunity>();
+
+        foreach (var team in teams)
+        {
+            var score = pilot.GetWeightedScore(team.HiringWeights);
+
+            if (team.RequiresFullF1SuperLicence && !pilot.EligibleForFullF1SuperLicence)
+                continue;
+
+            if (team.RequiresFpOnlySuperLicence && !pilot.EligibleForFpOnlySuperLicence)
+                continue;
+
+            score += context.FormModifier;
+            score += context.RelationshipBonuses.GetValueOrDefault(team.Id, 0.0);
+            score -= team.ExpectedSalaryPressure;
+
+            if (team.HasReserveOpening)
+            {
+                results.Add(new CareerOpportunity(
+                    team.SeriesId,
+                    team.Id,
+                    "reserve_driver",
+                    team.RequiresFullF1SuperLicence,
+                    score,
+                    "Reserva disponível; encaixe técnico aceitável."
+                ));
+            }
+
+            if (team.HasRaceSeatOpening)
+            {
+                results.Add(new CareerOpportunity(
+                    team.SeriesId,
+                    team.Id,
+                    "race_driver",
+                    team.RequiresFullF1SuperLicence,
+                    score + 10.0,
+                    "Assento titular disponível; piloto atende perfil esportivo."
+                ));
+            }
+        }
+
+        return results
+            .OrderByDescending(x => x.Score)
+            .Take(10)
+            .ToList();
+    }
+}
+Estrutura de evento de corrida em GDScript
+extends RefCounted
+class_name RaceEventLogEntry
+
+var lap: int
+var event_type: String
+var subject_id: String
+var team_id: String
+var payload: Dictionary
+var severity: int
+var timestamp_ms: int
+
+func to_dict() -> Dictionary:
+    return {
+        "lap": lap,
+        "event_type": event_type,
+        "subject_id": subject_id,
+        "team_id": team_id,
+        "payload": payload,
+        "severity": severity,
+        "timestamp_ms": timestamp_ms
+    }
+UX, contratos de IA, roadmap e governança
+Fluxos de UI e telas principais
+A UI precisa servir a dois ritmos muito diferentes: leitura lenta e densidade informacional no Manager, e reação rápida com HUD limpo no Piloto. Godot é apropriado para isso porque a UI se apoia em Control, anchors responsivos, foco por teclado/gamepad e CanvasLayer para HUD estático sobre a cena; se a equipe optar por Avalonia em ferramentas auxiliares, o DataGrid é especialmente útil para editores de calendário, listas de pilotos, contratos e balanceamento. [27]
+Contratos para Codex e Claude
+A forma mais segura de usar agentes de código neste projeto é tratá-los como geradores de módulos pequenos com interface fixa, não como autores do jogo inteiro em um único prompt. Isso é compatível com o que a documentação pública descreve: Codex é um agente de código que escreve, revisa, depura e pode operar por CLI, IDE e cloud; Claude Code é um assistente que entende o codebase, edita arquivos e executa tarefas de desenvolvimento. O contrato recomendado é sempre o mesmo: entrada estruturada, arquivos-alvo explícitos, testes exigidos e critérios de aceitação verificáveis. [28]
+Interfaces internas recomendadas
+Endpoints opcionais para harness de desenvolvimento
+Esses endpoints não são obrigatórios para o jogo final; são úteis para testes automatizados, balanceamento em lote e integração com agentes:
+Biblioteca de prompts prontos e parametrizados
+Prompt para modelos de dados
+Objetivo: gerar modelos de domínio para {{engine}} usando {{language}}.
+Contexto: jogo de carreira de automobilismo com modos Manager, Piloto e Legacy.
+Arquivos-alvo: {{file_list}}.
+Entregáveis:
+1. classe Pilot com atributos multidimensionais;
+2. classe TeamProfile com pesos de contratação;
+3. enums para CareerRole, SeriesFamily e ContractType;
+4. serialização JSON compatível com os manifests anexos.
+Restrições:
+- não usar marcas, equipes ou pilotos reais;
+- incluir validação básica e comentários;
+- escrever testes unitários para cada modelo;
+- manter compatibilidade com {{framework_version}}.
+Critérios de aceitação:
+- compila sem warnings;
+- testes passam;
+- os objetos conseguem serializar/deserializar os JSONs de exemplo.
+Prompt para parser e validador de JSON
+Analise o schema abaixo e gere um parser robusto em {{language}} para Godot 4.
+Arquivos-alvo: ContentRepository, JsonSchemaValidator, ErrorReport.
+Requisitos:
+- ler manifests de /data e /mods;
+- aplicar override de mods por prioridade;
+- falhar com mensagens legíveis;
+- validar campos obrigatórios, faixas numéricas e referências cruzadas;
+- incluir testes com fixtures válidos e inválidos.
+Saída esperada:
+- código de produção;
+- testes;
+- exemplo de uso.
+Prompt para simulador de corrida
+Implemente um RaceSimulator determinístico para {{series_family}}.
+Mecânicas mínimas:
+- seed fixa;
+- pace base por piloto + carro + pista;
+- pneus/combustível/energia;
+- pit stops;
+- incidentes probabilísticos;
+- safety car / FCY / chuva quando aplicável;
+- log estruturado por volta.
+Entregáveis:
+- interface IRaceSimulator;
+- implementação base;
+- 10 testes de regressão;
+- benchmark simples com 100 simulações.
+Restrições:
+- sem assets reais;
+- parametrizar tudo em ruleset JSON;
+- escrever documentação inline.
+Prompt para cenas de UI em Godot
+Gere cenas Godot 4 para o modo {{mode}}.
+Telas:
+{{screen_list}}
+Diretrizes:
+- usar Control nodes;
+- HUD em CanvasLayer quando houver corrida;
+- foco navegável por teclado/gamepad;
+- separar cena e lógica;
+- usar sinais para eventos;
+- textos via sistema de localização.
+Entregáveis:
+- arquivos .tscn;
+- scripts vinculados;
+- prefab de componentes reutilizáveis;
+- tema base.
+Prompt para save/load
+Implemente SaveService híbrido JSON + SQLite.
+Requisitos:
+- snapshot atômico;
+- versão de schema;
+- migração simples entre versões;
+- rollback em caso de falha;
+- exportação de save para arquivo compactado;
+- testes de persistência e integridade.
+Entregáveis:
+- SaveService;
+- MigrationRunner;
+- SaveManifest;
+- testes.
+Prompt para mod loader
+Crie um ModLoader para Godot 4 com suporte a:
+- scan em /mods/enabled;
+- mod_manifest.json;
+- dependências e conflitos;
+- prioridade de carregamento;
+- hot-reload apenas em ferramentas internas;
+- relatório de erro amigável.
+Inclua:
+- parser JSON;
+- resolvedor de dependências;
+- testes;
+- exemplo de manifesto.
+Roadmap de versões
+A estratégia correta é lançar cedo com um núcleo sólido, porque a abrangência de categorias solicitada é grande. A boa prática observável em managers do nicho é crescer por blocos de conteúdo e sistemas, não tentar entregar toda a malha esportiva de uma vez; isso também melhora a compatibilidade com agentes de código, que trabalham melhor em incrementos pequenos e verificáveis. [29]
+Testes, QA e métricas de equilíbrio
+Para QA, a combinação ideal é testes automatizados .NET, execução headless em CI e cenários de regressão por seed. dotnet test executa suites automatizadas; Godot suporta exportação e execução headless por linha de comando, o que facilita pipelines contínuos. [30]
+As métricas de equilíbrio mais úteis são: taxa média de promoção por tier, distribuição de campeões por equipe, número médio de temporadas até elite, taxa de carreira “presa” em cada família, valor médio de contrato por reputação, taxa de substituições emergenciais por temporada, número de pilotos sem vaga após ganhar F2/Indy NXT/LMP2 e volatilidade financeira por categoria.
+Internacionalização e licenciamento
+Se o runtime principal for Godot, a recomendação é usar o sistema oficial de internacionalização com TranslationServer, arquivos de tradução e pseudo-localização desde o primeiro protótipo; Godot documenta explicitamente a capacidade de trocar traduções em runtime e testar pseudo-localização, o que é especialmente útil em um jogo com muitos textos dinâmicos. Em ferramentas Avalonia, a rota mais simples é ResX. [31]
+No licenciamento, a orientação técnica deve ser conservadora: não usar marcas reais, nomes reais de equipes, pilotos, logos, pinturas, layouts protegidos, posters promocionais ou áudio oficial. WIPO define marca como sinal distintivo de bens ou serviços; a proteção marcária normalmente decorre de registro e o titular controla o uso em classes relevantes. Já jogos e seus elementos visuais são uma combinação complexa de software, audiovisual, gráficos, texto, música e marcas; por isso, copiar ativos reconhecíveis cria riscos cumulativos de copyright e trademark. A saída segura é criar naming, escudos, liveries, tipografia e identidade visual originais, além de manter categorias em nomes genéricos ou ficcionais quando necessário. Isso não substitui aconselhamento jurídico profissional, mas é a abordagem de menor risco para um projeto independente. [32]
+Jogos de referência para benchmarking de produto
+A síntese final é objetiva: para que dois agentes de código consigam gerar esse jogo com baixo retrabalho, o projeto precisa nascer modular, data-driven, testável por seed, externamente configurável e juridicamente desacoplado de marcas reais. O melhor núcleo inicial é Godot 4 + C#, com conteúdo em JSON, saves/estatísticas em SQLite, corrida manager primeiro, pilotagem ativa depois, malha de categorias expandindo por ondas, e contratos explícitos de geração para Codex e Claude em torno de módulos pequenos, schemas claros e testes executáveis. [37]
+[1] [37] Exporting for Windows - Godot Docs
+https://docs.godotengine.org/en/latest/tutorials/export/exporting_for_windows.html?utm_source=chatgpt.com
+[2] [6] https://api.fia.com/news/single-seater-pathway-set-stellar-2025
+https://api.fia.com/news/single-seater-pathway-set-stellar-2025
+[3] [28] https://developers.openai.com/codex
+https://developers.openai.com/codex
+[4] [33] https://store.steampowered.com/app/1757580/Open_Wheel_Manager_2/
+https://store.steampowered.com/app/1757580/Open_Wheel_Manager_2/
+[5] [29] [35] https://store.steampowered.com/app/4340600/
+https://store.steampowered.com/app/4340600/
+[7] FIA Formula 3 Championship
+https://api.fia.com/events/fia-formula-3-championship/season-2026/fia-formula-3?utm_source=chatgpt.com
+[8] https://www.usfpro2000.com/about/usf-pro-championships
+https://www.usfpro2000.com/about/usf-pro-championships
+[9] https://www.gt4europeanseries.com/about/gt4-european-series
+https://www.gt4europeanseries.com/about/gt4-european-series
+[10] https://www.adac-motorsport.de/en/adac-gt-masters/news/2025/20th-anniversary-2026-season-kicks-off-against-alpine-backdrop/
+https://www.adac-motorsport.de/en/adac-gt-masters/news/2025/20th-anniversary-2026-season-kicks-off-against-alpine-backdrop/
+[11] https://www.fiatcrworldtour.com/
+https://www.fiatcrworldtour.com/
+[12] https://www.nascar.com/news-media/2024/01/31/what-is-nascar-regional/
+https://www.nascar.com/news-media/2024/01/31/what-is-nascar-regional/
+[13] Formula Regional European Championship
+https://fiafrec.com/?utm_source=chatgpt.com
+[14] [18] https://activityreport2024.fia.com/sport-championships/single-seater/
+https://activityreport2024.fia.com/sport-championships/single-seater/
+[15] [17] [19] [20] [21] [22] https://api.fia.com/system/files/documents/appendix_l_2026_publie_le_26_mars_2026.pdf
+https://api.fia.com/system/files/documents/appendix_l_2026_publie_le_26_mars_2026.pdf
+[16] FORMULA MIDDLE EAST
+https://www.formulamideast.com/?utm_source=chatgpt.com
+[23] [27] https://docs.godotengine.org/en/stable/classes/class_control.html
+https://docs.godotengine.org/en/stable/classes/class_control.html
+[24] https://docs.godotengine.org/en/stable/about/introduction.html
+https://docs.godotengine.org/en/stable/about/introduction.html
+[25] https://docs.godotengine.org/en/4.4/classes/class_json.html
+https://docs.godotengine.org/en/4.4/classes/class_json.html
+[26] https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/gdscript_basics.html
+https://docs.godotengine.org/en/stable/tutorials/scripting/gdscript/gdscript_basics.html
+[30] https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test
+https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-test
+[31] https://docs.godotengine.org/en/stable/classes/class_translationserver.html
+https://docs.godotengine.org/en/stable/classes/class_translationserver.html
+[32] https://www.wipo.int/en/web/trademarks
+https://www.wipo.int/en/web/trademarks
+[34] https://gtmanagerpc.com/
+https://gtmanagerpc.com/
+[36] https://store.steampowered.com/app/1013960/Open_Wheel_Manager/
+https://store.steampowered.com/app/1013960/Open_Wheel_Manager/
+
+[TABELA 1]
+Modo || Papel do jogador || Núcleo do loop || Resultado esperado
+Manager || Chefe de equipe || contratar, desenvolver, negociar, decidir estratégia, gerir risco financeiro || escalar equipe, sobreviver economicamente, vencer campeonatos
+Piloto || Carreira individual || treinar, negociar assentos, correr ativamente, aceitar convites e reservas || construir reputação, obter Super Licença, migrar entre categorias
+Legacy || Carreira híbrida de longo prazo || começar como piloto ou gestor e trocar de função ao longo das décadas || narrativa procedural de várias gerações
+
+[TABELA 2]
+Família || Caminho principal recomendado no jogo || Pontos de início permitidos || Base oficial e observações
+Monopostos FIA || Kart local → kart regional → kart nacional → kart internacional → F4 → Formula Regional → FIA F3 → FIA F2 → F1 || Kart, F4, Formula Regional, F3, F2 || A FIA descreve o caminho karting → F4 → Formula Regional → FIA F3 → FIA F2 → F1; F2 e F3 se apresentam oficialmente como “Road to F1”. [7]
+Indy || Kart → USF Juniors → USF2000 → USF Pro 2000 → INDY NXT → IndyCar || USF2000, USF Pro 2000, INDY NXT, IndyCar || USF Pro Championships define três degraus formais; INDY NXT é a série de desenvolvimento da INDYCAR. [8]
+Endurance || Kart → GT4 → GT3 → LMP3 → LMP2 → Hypercar / Le Mans 24h || GT4, GT3, LMP3, LMP2 || GT4 é degrau para GT3; LMP3 atua como base de protótipos; ELMS descreve LMP2 como parte central rumo ao topo; FIA WEC usa Hypercar e LMGT3. [9]
+Turismo alemão e GT || Kart → GT4 Germany → ADAC GT Masters → DTM || GT4 Germany, GT Masters, DTM || O “Road to DTM” oficial passa de karting a GT4 Germany, GT Masters e DTM; o DTM atual opera com carros GT3. [10]
+TCR || Kart → TCR nacional/regional → FIA TCR World Tour || TCR regional, TCR World Tour || O FIA TCR World Tour se define como o topo do conceito que conecta séries regionais e nacionais. [11]
+NASCAR || Kart/Late Models → NASCAR Local Racing Series → ARCA Menards/Whelen Modified Tour → Truck → Xfinity → Cup || ARCA, Truck, Xfinity, Cup || A NASCAR descreve a escada começando em Regional/Local e elevando o piloto às séries nacionais; Cup e Truck têm páginas oficiais dedicadas. [12]
+
+[TABELA 3]
+Região no jogo || Implementação recomendada || Status || Fundamentação
+Europeia || Fórmula Regional Europeia || oficial || Existe oficialmente como FIA Formula Regional European Championship. [13]
+Americana || Fórmula Regional Américas || oficial || A FIA registrou Formula Regional nas Américas no pathway global e a tabela 2026 de pontos segue incluindo Formula Regional Americas Championship. [14]
+Asiática || Fórmula Regional Asiática como guarda-chuva ficcional sobre Japão/Índia e subcampeonatos opcionais || híbrido || As fontes oficiais levantadas aqui apontam campeonatos Formula Regional no Japão e na Índia, não uma única liga continental homogênea para toda a Ásia. [15]
+Oriente Médio || Fórmula Regional Oriente Médio || oficial || O Formula Regional Middle East Trophy tem reconhecimento FIA e site oficial próprio. [16]
+Sul-Americana || Fórmula Regional Sul-Americana inspirada em F4 Brasil e eventos regionais || ficcional recomendada || O briefing pede cobertura sul-americana; nas fontes oficiais aqui levantadas, o degrau formal mais claro é a F4 Brasil, enquanto o campeonato continental listado é Formula Regional Americas. [17]
+Africana || Fórmula Regional Africana como camada ficcional modular || ficcional recomendada || Não foi identificada, nas fontes oficiais levantadas aqui, uma Formula Regional africana equivalente às ligas europeia, américas ou oriente médio; portanto, a solução segura é ficcionalizar. [18]
+Oceania || Fórmula Regional Oceania || opcional oficial || A FIA mantém Formula Regional Oceania Trophy na tabela de pontos 2026; não é requisito do briefing, mas vale como mod pack futuro. [19]
+
+[TABELA 4]
+Início || Disponível em || Regra recomendada
+Kart || Piloto, Legacy || carreira completa, maior duração, mais variância
+F4 || Piloto, Legacy || atalho curto para monopostos
+Formula Regional || Piloto, Legacy || bom para saves médios
+FIA F3 || Piloto, Legacy || atalho de desempenho; dificuldade alta para obter F2/F1
+FIA F2 || Piloto, Legacy || curto prazo; foco em Super Licença e vitrines
+USF Pro 2000 / INDY NXT || Piloto, Legacy || entrada direta na escada americana
+GT4 / GT3 / LMP3 || Piloto, Legacy || início focado em endurance/GT
+ARCA / Truck / Xfinity || Piloto, Legacy || início focado em oval e stock car
+Manager em equipe pequena || Manager, Legacy || verba baixa, infraestrutura fraca
+Manager em equipe média/grande || Manager, Legacy || modo curto, mas com metas agressivas
+Sandbox || todos || sem restrições econômicas e com regras editáveis
+
+[TABELA 5]
+
+
+[TABELA 6]
+Mecânica || Regra de design recomendada || Dados mínimos
+Oportunidades || gerar propostas ao fim de cada evento e de cada temporada || reputação, idade, verba, forma recente, mercado
+Academias || Reduzem custo de subida, aumentam treino e restringem mobilidade contratual || fabricante, duração, buyout, obrigações
+Patrocínio escalonador || Patrocinador ou academia pode pagar a próxima categoria || verba, metas, exposição, região
+Saltos de categoria || Permitidos quando reputação e licença superarem o padrão da categoria || rating global, pontos, assento livre
+Promoção não automática || ganhar campeonato ajuda, mas não garante vaga || grade de avaliação multicritério
+Piloto reserva || contrato de espera, FP, simulador e chamadas de substituição || elegibilidade, disponibilidade, equipe principal
+Lesões e substituições || qualquer piloto pode perder etapas; reservas e pilotos livres podem ser chamados || saúde, agenda, prioridade de substituição
+Mercado de pilotos || movimentação de todo o grid em tempo real || contratos, cláusulas, expectativas, reputação
+Contratos || salário fixo + bônus + buyout + cláusulas esportivas || início, fim, objetivos, renovação
+Reputação multidimensional || nada de nota única; usar vetores de competência || velocidade, constância, chuva, feedback etc.
+Decisões em corrida || Manager toma decisões táticas; Piloto executa pilotagem ativa || estado da corrida, pneus, combustível, risco
+
+[TABELA 7]
+Item regulatório || Regra oficial 2026 usada como referência no jogo
+Idade mínima F1 || 18 anos, com possibilidade discricionária aos 17
+Experiência mínima || 80% de duas temporadas completas em campeonatos elegíveis
+Caminho normal || 40 pontos de Super Licença
+Caminho excepcional || 30 pontos apenas em cenário discricionário de força maior
+FP-only || licença separada; FP pode dar +1 ponto por evento, até 10
+Karting || máximo de 12 pontos válidos por cinco anos
+
+[TABELA 8]
+Eixo || Efeito direto
+Velocidade pura || pace-base em classificação e corrida
+Consistência || redução de variância e erros
+Chuva || bônus em pista molhada/instável
+Ultrapassagem || probabilidade de ataque bem-sucedido
+Defesa || retenção de posição
+Gestão de pneus || menor degradação relativa
+Gestão de energia/combustível || eficiência em stint
+Feedback técnico || acelera desenvolvimento do carro
+Marketing || melhora ofertas de patrocínio
+Potencial || crescimento de atributos com treino
+Maturidade || menor risco de erro sob pressão
+Adaptabilidade || transição entre categorias
+
+[TABELA 9]
+Critério || Godot 4 + C# || Godot 4 + GDScript || .NET + Avalonia
+Build Windows || excelente || excelente || excelente
+UI de jogo em tempo real || excelente || excelente || boa
+Ferramentas/editor || boa || boa || excelente
+Performance de lógica complexa || muito boa || boa || muito boa
+Curva para IA gerar código || muito boa || excelente || muito boa
+Mod packs/PCK || nativo || nativo || precisa solução própria
+DataGrid denso || suficiente || suficiente || excelente
+
+[TABELA 10]
+Entidade || Tipo recomendado || Observação
+series_manifest || JSON || define categoria, calendário, regras, pneu, formato
+track_manifest || JSON || setores, tipo, consumo, overtaking profile
+team_manifest || JSON || orçamento, infraestrutura, filosofia, academia
+pilot_manifest || JSON || atributos base, potencial, nacionalidade, mercado
+season_rules || JSON || pontos, sprint, pit rules, condições de licença
+career_save || SQLite || estado persistente do mundo
+race_event_log || SQLite || logs detalhados para replay e QA
+mod_manifest || JSON || versão, dependências, compatibilidade
+
+[TABELA 11]
+
+
+[TABELA 12]
+Tabela || Chave || Campos-chave
+save_meta || save_id || versão, data, seed global
+pilots || pilot_id || nome ficcional, idade, país, atributos
+teams || team_id || nome ficcional, série atual, orçamento
+contracts || contract_id || piloto/equipe, início, fim, cláusulas
+series || series_id || tipo, família, requisitos
+events || event_id || série, pista, data, clima-base
+sessions || session_id || evento, sessão, duração
+results || result_id || sessão, piloto, equipe, posição
+licenses || license_id || pontos, elegibilidade, validade
+opportunities || opportunity_id || origem, destino, prazo, condição
+injuries || injury_id || piloto, severidade, corridas perdidas
+race_event_log || log_id || timestamp_lap, tipo, payload_json
+
+[TABELA 13]
+Tela || Modo || Componentes essenciais
+Menu principal || todos || continuar, novo save, carregamento de mods, opções
+Hub de temporada || Manager/Legacy || calendário, caixa, desenvolvimento, staff, contratos
+Hub de piloto || Piloto/Legacy || agenda, empresário, propostas, treino, reputação
+Mercado de transferências || todos || filtro por família, série, idade, custo, licença
+Tela de corrida manager || Manager || classificação, stint, pit window, ordens, forecast
+Tela de corrida piloto || Piloto || HUD, rádio, objetivos, delta, pneus, energia
+Central de oportunidades || todos || propostas, reservas, testes, buyouts, prazos
+Tela de staff/fábrica || Manager || R&D, peças, confiabilidade, sim, patrocínio
+Tela de licenças || Piloto/Legacy || pontos, elegibilidade, próximos caminhos
+Tela de modding || todos || mods ativos, conflitos, compatibilidade, validação
+
+[TABELA 14]
+Módulo || Interface/função || Responsabilidade
+Content Loader || IContentRepository.LoadSeries(id) || carregar JSON, validar schema, aplicar overrides
+Career Engine || ICareerEngine.AdvanceWeek(saveId) || avançar calendário e gerar oportunidades
+Market Engine || IMarketEngine.ResolveMoves(window) || mercado de pilotos, buyouts, reservas
+Licence Engine || ILicenceEngine.Recalculate(pilotId, season) || pontos, bônus de FP, elegibilidade
+Race Simulator || IRaceSimulator.RunSession(sessionId, seed) || simular sessão com log determinístico
+Driver Controller || IDriverController.SampleInput(frame) || pilotagem ativa
+Strategy Engine || IStrategyEngine.Decide(teamState) || IA de estratégia
+Save System || ISaveService.Save(slot) / Load(slot) || persistência
+Mod Validator || IModValidator.Validate(path) || schema, dependências, conflitos
+Telemetry Tool || ITelemetryAnalyzer.Run(batch) || equilíbrio e regressão
+
+[TABELA 15]
+Endpoint || Método || Payload
+/api/v1/race/simulate || POST || session_id, seed, weather_profile
+/api/v1/career/advance-week || POST || save_id
+/api/v1/licence/recalculate || POST || pilot_id, season
+/api/v1/mods/validate || POST || mod_path
+/api/v1/content/generate-series || POST || template de série e parâmetros
+/api/v1/save/snapshot || POST || save_id, label
+/api/v1/telemetry/balance-run || POST || lote de seeds e cenários
+
+[TABELA 16]
+
+
+[TABELA 17]
+Versão || Escopo || Entregáveis principais || Checklist de entrega || Horas/pessoas
+0.1 || núcleo jogável || save/load, calendário, pilotos, equipes, contratos, corrida manager simplificada, F4/Regional/F3 || compila; salva; corre temporada completa; AI de pit básica; 1 seed de regressão || não especificado
+0.2 || monopostos superiores || F2, F1, Super Licença, academia, reservas, chamadas de substituição || pontos de licença batem com tabela externa; piloto reserva jogável; lesões funcionam || não especificado
+0.3 || modo Piloto || classificação, corrida ativa, HUD, treino, empresário, reputação || 1 carreira completa em F3/F2; telemetria básica; tutorial mínimo || não especificado
+0.4 || ladder Indy || USF Pro ladder, INDY NXT, IndyCar, ovals simplificados || season complete; migração lateral F2 ↔ Indy; regras de oval básicas || não especificado
+0.5 || endurance || GT4, GT3, LMP3, LMP2, Hypercar, revezamento || trocas de piloto; stint; multiclasses; Le Mans-like event || não especificado
+0.6 || turismo europeu || GT4 Germany, GT Masters, DTM, TCR || road to DTM; TCR regional/world; classes turistas funcionais || não especificado
+0.7 || NASCAR || ARCA, Truck, Xfinity, Cup, cautions e playoffs configuráveis || ladder regional; cautions; playoffs; pistas ovais/road course || não especificado
+0.8 || modding maduro || editor, validador, manifests, conflitos, import/export || 3 mods de exemplo; documentação de schema; carregamento seletivo || não especificado
+1.0 || consolidação || Legacy completo, tuning de balanceamento, telemetria, localização || campanha longa estável; regressão; documentação técnica; build distribuível || não especificado
+
+[TABELA 18]
+Área || Cenário de teste || Métrica
+Parser de conteúdo || carregar 100 manifests válidos e 100 inválidos || taxa de erro útil e legível
+Save/load || salvar antes e depois de corrida longa || integridade do snapshot
+Progressão || 10 mil carreiras simuladas por seed || distribuição de chegadas à F1/Indy/Hypercar
+Economia || 5 mil temporadas manager || taxa de falência por tier
+Mercado || janela de transferências completa || coerência contratual e ausência de duplicatas
+Super Licença || casos de 39, 40, 30+força maior, FP points || elegibilidade correta
+Corrida || 1.000 sessões por categoria || variação plausível de resultados e incidentes
+UI || navegação teclado/gamepad || cobertura de foco
+Modding || conflito entre dois mods e override de dados || resolução previsível
+Localização || pseudo-localização e mudança dinâmica de idioma || clipping, overflow, texto ausente
+
+[TABELA 19]
+Jogo || Lição útil || Fonte
+Open Wheel Manager 2 || foco forte em patrocínio, staff, pesquisa e gestão de equipe || [33]
+GT Manager || progressão estruturada de GT4 até Hypercar || [34]
+A Racing Manager – Team Principal || sandbox profundo e mundo customizável || [35]
+Open Wheel Manager || valor do princípio de “indirect control” em managers de corrida || [36]

@@ -221,13 +221,33 @@ def draw_menu_card_art(surf, rect, accent, variant, t=0.0):
     surf.blit(pygame.transform.smoothscale(art, rect.size), rect.topleft)
 
 
+def _placeholder_icon(name, size):
+    """Ícone vetorial de reserva quando o SVG em assets/icons não existe."""
+    surf = pygame.Surface((size, size), pygame.SRCALPHA)
+    palette = {"driver": T.ACCENT, "helmet": T.ACCENT, "manager": T.ACCENT_2,
+               "team": T.ACCENT_2, "load": T.GOLD, "save": T.GOLD}
+    col = palette.get(name, T.ACCENT)
+    pygame.draw.circle(surf, (*col, 60), (size // 2, size // 2), size // 2)
+    pygame.draw.circle(surf, col, (size // 2, size // 2), size // 2, max(2, size // 18))
+    try:
+        font = pygame.font.SysFont("arial", int(size * 0.5), bold=True)
+        img = font.render((name[:1].upper() if name else "?"), True, col)
+        surf.blit(img, img.get_rect(center=(size // 2, size // 2)))
+    except Exception:
+        pass
+    return surf
+
+
 def draw_downloaded_icon(surf, name, center, size=58, alpha=235):
-    """Draws downloaded SVG icon assets from assets/icons."""
+    """Draws downloaded SVG icon assets from assets/icons (com fallback vetorial)."""
     key = (name, size)
     if key not in _asset_icon_cache:
         path = Path(__file__).resolve().parents[1] / "assets" / "icons" / f"{name}.svg"
-        img = pygame.image.load(str(path)).convert_alpha()
-        _asset_icon_cache[key] = pygame.transform.smoothscale(img, (size, size))
+        try:
+            img = pygame.image.load(str(path)).convert_alpha()
+            _asset_icon_cache[key] = pygame.transform.smoothscale(img, (size, size))
+        except Exception:
+            _asset_icon_cache[key] = _placeholder_icon(name, size)
     img = _asset_icon_cache[key]
     if alpha < 255:
         img = img.copy()
