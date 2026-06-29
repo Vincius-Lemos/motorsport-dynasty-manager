@@ -602,6 +602,12 @@ class CareerScene(Scene):
         car = self.app.career
         if car.season_complete():
             return
+        # FP1 raríssimo (academia) no início do fim de semana — com tela
+        if self.app.profile.mode != "manager" and hasattr(car, "run_fp1_session"):
+            fp1 = car.run_fp1_session()
+            if fp1:
+                self.app.push(FP1ResultScene(self.app, fp1))
+                return
         self.app.push(QualifyingScene(self.app))
 
     def _end_season(self):
@@ -843,6 +849,67 @@ class CareerScene(Scene):
 # CLASSIFICAÇÃO (qualifying)
 # ══════════════════════════════════════════════════════════════════════════════
 SEG_COLOR = {"Q3": T.PURPLE, "Q2": T.ACCENT_2, "Q1": T.TEXT_DIM, "Q": T.TEXT_DIM}
+
+
+class FP1ResultScene(Scene):
+    """Resultado da sessão de FP1 (treino livre 1)."""
+    def __init__(self, app, fp1):
+        super().__init__(app)
+        self.fp1 = fp1
+
+    def on_enter(self):
+        f = self.app.fonts
+        self.go = Button((T.WIDTH // 2 - 150, T.HEIGHT - 70, 300, 52),
+                         "IR PARA A CLASSIFICAÇÃO", self._go, f.h2, icon="play")
+
+    def _go(self):
+        self.app.replace(QualifyingScene(self.app))
+
+    def update(self, dt): ...
+
+    def handle(self, event):
+        self.go.handle(event)
+
+    def draw(self, surf):
+        gradient_bg(surf)
+        f = self.app.fonts
+        fp = self.fp1
+        cx = T.WIDTH // 2
+        draw_text(surf, "TREINO LIVRE 1 (FP1)", f.h1, T.ACCENT, (cx, 50), center=True)
+        draw_text(surf, f"{fp['track']} · {fp['team']}", f.body, T.TEXT_DIM, (cx, 100), center=True)
+
+        panel(surf, (cx - 380, 150, 760, 360), T.BG_PANEL, border=T.ACCENT_2, border_w=2)
+        x = cx - 340
+        # resultado / desfecho
+        outcome_txt = {
+            "crash":  ("VOCÊ BATEU O CARRO", T.RED),
+            "mech":   ("QUEBRA MECÂNICA", T.RED),
+            "stuck":  ("PRESO NO BOX (carro não saiu)", T.RED),
+            "ok":     ("IMPRESSIONOU!" if fp["impressed"] else "SESSÃO CONCLUÍDA",
+                       T.GREEN if fp["impressed"] else T.TEXT),
+        }[fp["outcome"]]
+        draw_text(surf, outcome_txt[0], f.h2, outcome_txt[1], (x, 172))
+
+        rows = []
+        if fp["outcome"] not in ("stuck",):
+            mins = int(fp["time"] // 60); secs = fp["time"] - mins * 60
+            rows.append(("Seu melhor tempo", f"{mins}:{secs:06.3f}", T.TEXT))
+            rows.append(("Posição na sessão", f"P{fp['pos']} de {fp['field']}",
+                         T.GOLD if fp["pos"] <= 5 else T.TEXT))
+            gap = fp["gap"]
+            gtxt = ("+%.3f mais lento" % gap) if gap > 0 else ("%.3f mais rápido" % gap)
+            rows.append((f"Vs. titular ({fp['titular']})", gtxt,
+                         T.GREEN if gap <= 0 else T.RED))
+        rows.append(("Voltas completadas", str(fp["laps"]), T.TEXT))
+        rows.append(("Pontos de Super Licença", f"+{fp['sl_pts']}",
+                     T.GOLD if fp["sl_pts"] else T.TEXT_DIM))
+        y = 224
+        for lab, val, col in rows:
+            draw_text(surf, lab, f.body, T.TEXT_DIM, (x, y))
+            draw_text(surf, val, f.body, col, (x + 680, y), right=True)
+            y += 46
+
+        self.go.draw(surf)
 
 
 class QualifyingScene(Scene):

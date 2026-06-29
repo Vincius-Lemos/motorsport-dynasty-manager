@@ -186,6 +186,56 @@ class DriverCareer:
                 return r["pos"]
         return len(quali["rows"])
 
+    def run_fp1_session(self) -> Optional[dict]:
+        """No início do fim de semana, pode haver uma sessão de FP1 (raríssima,
+        via academia). Retorna um dict com o resultado da sessão, ou None."""
+        d = self.player_driver
+        if (not d.academy_id or d.is_injured or
+                self.current_series_id == "formula_1"):
+            return None
+        if not acad.roll_fp1_session(d, d.academy_id, self.current_series_id):
+            return None
+        base = self.series_rules["base_lap_time_seconds"]
+        quality = max(0.0, min(1.0, (d.overall - 55) / 30.0))
+        player_time = base * (1.045 - 0.045 * quality) + random.gauss(0, 0.30)
+
+        roll = random.random()
+        crashed = roll < 0.06
+        broke   = 0.06 <= roll < 0.10
+        stuck   = 0.10 <= roll < 0.13
+        outcome = ("crash" if crashed else "mech" if broke else
+                   "stuck" if stuck else "ok")
+        laps = 0 if stuck else random.randint(8, 22)
+
+        tid = self.current_team.id if self.current_team else None
+        titular = next((x for x in self.all_drivers
+                        if x.team_id == tid and x.id != d.id), None)
+        tit_time = (base * (1.0 - 0.02 * max(0.0, min(1.0, (titular.overall - 55) / 30.0)))
+                    + random.gauss(0, 0.22)) if titular else player_time
+        gap = player_time - tit_time
+
+        field = [x for x in self.all_drivers if not x.is_injured]
+        times = sorted(base * (1.05 - 0.05 * max(0.0, min(1.0, (x.overall - 55) / 30.0)))
+                       for x in field)
+        pos = min(len(field), sum(1 for tt in times if tt < player_time) + 1)
+
+        pts = 0 if (crashed or stuck) else sl.award_fp1_bonus(d)
+        d.gain_race_xp(8 if not (crashed or stuck) else 3)
+        impressed = (outcome == "ok" and gap < 0.15 and pos <= len(field) * 0.5)
+
+        verb = {"crash": "bateu o carro", "mech": "teve quebra mecânica",
+                "stuck": "ficou preso no box",
+                "ok": "impressionou" if impressed else "fez uma sessão discreta"}[outcome]
+        team_name = self.current_team.name if self.current_team else "a equipe"
+        self._push_news("fp1", f"{d.name} {verb} no FP1 pela {team_name}",
+                        driver_id=d.id)
+        return {
+            "track": self.current_round().track_name if self.current_round() else "",
+            "team": team_name, "time": player_time, "pos": pos, "field": len(field),
+            "titular": titular.name if titular else "—", "gap": gap, "laps": laps,
+            "outcome": outcome, "sl_pts": pts, "impressed": impressed,
+        }
+
     def _sub_in_reserve(self):
         """Se o jogador está lesionado, um reserva assume o carro nesta etapa."""
         if not (self.player_driver.is_injured and self.current_team):
@@ -237,18 +287,7 @@ class DriverCareer:
                 injury_events.append(ev)
                 self.injury_log.append(ev)
 
-        # FP1 da academia (não para titular de F1)
-        if (self.player_driver.academy_id and
-                self.current_series_id != "formula_1"):
-            if acad.roll_fp1_session(self.player_driver, self.player_driver.academy_id,
-                                     self.current_series_id):
-                pts = sl.award_fp1_bonus(self.player_driver)
-                self.player_driver.gain_race_xp(8)
-                fp1_events.append({
-                    "driver": self.player_driver.name,
-                    "sl_pts": pts,
-                    "academy": self.player_driver.academy_id,
-                })
+        # (FP1 agora roda no início do fim de semana via run_fp1_session, com tela)
 
         reserve = self._sub_in_reserve()
         active_drivers = [d for d in self.all_drivers if not d.is_injured]
