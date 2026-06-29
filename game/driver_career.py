@@ -702,6 +702,61 @@ class DriverCareer:
                driver=self.player_driver.name, team=team_id, series=series_id),
             driver_id=self.player_driver.id, round_number=self.season.current_round if self.season else 0)
 
+    # ── Troca imediata no meio da temporada ───────────────────────────────────
+    @property
+    def has_seat(self) -> bool:
+        return self.current_team is not None
+
+    def sign_midseason(self, team_id: str) -> bool:
+        """Assina com uma equipe da MESMA categoria já valendo na próxima corrida."""
+        from .career import realistic_salary
+        t = next((x for x in self.all_teams if x.id == team_id), None)
+        if not t:
+            return False
+        if self.current_team and self.player_driver.id in self.current_team.drivers:
+            self.current_team.drivers.remove(self.player_driver.id)
+            self.current_team.is_player_team = False
+        if len(t.drivers) >= 2:                       # equipe cheia: efeito cascata
+            dropped = t.drivers.pop()
+            dd = next((x for x in self.all_drivers if x.id == dropped), None)
+            if dd:
+                dd.team_id = None
+        t.drivers.insert(0, self.player_driver.id)
+        self.player_driver.team_id = t.id
+        t.is_player_team = True
+        self.current_team = t
+        self.player_driver.salary = realistic_salary(self.current_series_id,
+                                                     self.player_driver.overall)
+        self.player_driver.contract_years = 1
+        self._contract_next_year = None
+        self._contract_next_series = None
+        self._push_news("contract",
+            f"{self.player_driver.name} assume o carro da {t.name} a partir desta etapa.",
+            driver_id=self.player_driver.id,
+            round_number=self.season.current_round if self.season else 0)
+        return True
+
+    def switch_series_midseason(self, series_id: str, team_id: str) -> bool:
+        """Troca de CATEGORIA imediatamente (inicia o campeonato da nova série no ano)."""
+        from .career import realistic_salary
+        pd = self.player_driver
+        self.current_series_id = series_id
+        self._load_world(series_id)
+        self.all_drivers.append(pd)
+        self.current_team = next((t for t in self.all_teams if t.id == team_id),
+                                 self.all_teams[0])
+        self.current_team.is_player_team = True
+        pd.team_id = self.current_team.id
+        if pd.id not in self.current_team.drivers:
+            self.current_team.drivers.insert(0, pd.id)
+        pd.salary = realistic_salary(series_id, pd.overall)
+        pd.contract_years = 1
+        self._contract_next_year = None
+        self._contract_next_series = None
+        assign_ai_drivers(self.all_teams, self.all_drivers, exclude_ids=[pd.id])
+        self._start_season()
+        return True
+
     def start_new_season(self, promote: bool, new_team_id: Optional[str] = None):
         """Carrega próxima temporada. new_team_id: se oferta foi aceita."""
         old_series = self.current_series_id

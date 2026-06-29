@@ -2678,6 +2678,22 @@ class OfferScene(Scene):
                 self.app.notify(t("offer.insufficient", amount=f"{self.breaking_penalty:,.0f}"))
             p.personal_money -= self.breaking_penalty
 
+        # TROCA IMEDIATA: demissão (a equipe te dispensa) ou estar sem vaga =
+        # contrato para o ANO CORRENTE → vale já na próxima corrida.
+        seatless = self.is_driver and not getattr(car, "has_seat", True)
+        immediate = self.is_driver and (self.team_pays or seatless) and \
+            hasattr(car, "sign_midseason")
+        if immediate:
+            if o["from_series"] == car.current_series_id:
+                car.sign_midseason(o["from_team_id"])
+            elif hasattr(car, "switch_series_midseason"):
+                car.switch_series_midseason(o["from_series"], o["from_team_id"])
+            else:
+                car.sign_midseason(o["from_team_id"])
+            self.app.notify(t("offer.accepted", team=o["from_team"]) + " — vale já!")
+            self.app.pop()
+            return
+
         car._pending_offer = o
         if self.is_driver and hasattr(car, "sign_contract"):
             car.sign_contract(o["from_team_id"], o["from_series"])
